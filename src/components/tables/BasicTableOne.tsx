@@ -1,14 +1,13 @@
-import React from "react";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHeader,
-  TableRow,
+    Table,
+    TableBody,
+    TableCell,
+    TableHeader,
+    TableRow,
 } from "../ui/table";
 
-import Badge from "../ui/badge/Badge";
 import Image from "next/image";
+import Badge from "../ui/badge/Badge";
 
 interface Order {
   id: number;
@@ -113,7 +112,7 @@ const tableData: Order[] = [
 
 export default function BasicTableOne() {
   return (
-    <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
+    <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/3">
       <div className="max-w-full overflow-x-auto">
         <div className="min-w-[1102px]">
           <Table>

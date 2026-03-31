@@ -1,10 +1,10 @@
 "use client";
 
-import { MOCK_AUTH_STORAGE_KEY, UserRole } from "@/lib/mockAuth";
 import { useSidebar } from "@/context/SidebarContext";
 import AppHeader from "@/layout/AppHeader";
 import AppSidebar from "@/layout/AppSidebar";
 import Backdrop from "@/layout/Backdrop";
+import { clearAuthSession, getAuthSession, UserRole } from "@/lib/auth";
 import { usePathname, useRouter } from "next/navigation";
 import React, { useEffect } from "react";
 
@@ -18,21 +18,15 @@ export default function AdminLayout({
   const { isExpanded, isHovered, isMobileOpen } = useSidebar();
 
   useEffect(() => {
-    const authUser = localStorage.getItem(MOCK_AUTH_STORAGE_KEY);
-    if (!authUser) {
+    const session = getAuthSession();
+    if (!session) {
       router.replace("/signin");
       return;
     }
 
-    try {
-      const parsedUser = JSON.parse(authUser) as { role?: UserRole };
-      const allowedRoles: UserRole[] = ["superadmin", "admin", "cashier"];
-      if (!parsedUser.role || !allowedRoles.includes(parsedUser.role)) {
-        localStorage.removeItem(MOCK_AUTH_STORAGE_KEY);
-        router.replace("/signin");
-      }
-    } catch {
-      localStorage.removeItem(MOCK_AUTH_STORAGE_KEY);
+    const allowedRoles: UserRole[] = ["superadmin", "admin", "cashier"];
+    if (!session.user?.role || !allowedRoles.includes(session.user.role)) {
+      clearAuthSession();
       router.replace("/signin");
     }
   }, [pathname, router]);

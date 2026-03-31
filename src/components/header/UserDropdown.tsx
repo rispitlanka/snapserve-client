@@ -1,10 +1,15 @@
 "use client";
+import {
+    clearAuthSession,
+    getAuthSession,
+    logout,
+    UserRole,
+} from "@/lib/auth";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
 import { Dropdown } from "../ui/dropdown/Dropdown";
 import { DropdownItem } from "../ui/dropdown/DropdownItem";
-import { MOCK_AUTH_STORAGE_KEY, UserRole } from "@/lib/mockAuth";
-import { useRouter } from "next/navigation";
 
 export default function UserDropdown() {
   const router = useRouter();
@@ -13,16 +18,14 @@ export default function UserDropdown() {
   const [userRole, setUserRole] = useState<UserRole | null>(null);
 
   useEffect(() => {
-    const authUser = localStorage.getItem(MOCK_AUTH_STORAGE_KEY);
-    if (!authUser) return;
-
-    try {
-      const parsedUser = JSON.parse(authUser) as { name?: string; role?: UserRole };
-      if (parsedUser.name) setUserName(parsedUser.name);
-      if (parsedUser.role) setUserRole(parsedUser.role);
-    } catch {
-      localStorage.removeItem(MOCK_AUTH_STORAGE_KEY);
+    const session = getAuthSession();
+    if (!session) return;
+    if (session.user?.name) {
+      setUserName(session.user.name);
+    } else if (session.user?.restaurantId) {
+      setUserName(session.user.restaurantId);
     }
+    if (session.user?.role) setUserRole(session.user.role as UserRole);
   }, []);
 
 function toggleDropdown(e: React.MouseEvent<HTMLButtonElement, MouseEvent>) {
@@ -164,9 +167,16 @@ function toggleDropdown(e: React.MouseEvent<HTMLButtonElement, MouseEvent>) {
         <DropdownItem
           tag="button"
           onItemClick={closeDropdown}
-          onClick={() => {
-            localStorage.removeItem(MOCK_AUTH_STORAGE_KEY);
-            router.push("/signin");
+          onClick={async () => {
+            const session = getAuthSession();
+            try {
+              await logout(session?.refreshToken);
+            } catch {
+              // Clear local session regardless of server logout response.
+            } finally {
+              clearAuthSession();
+              router.push("/signin");
+            }
           }}
           className="flex items-center gap-3 px-3 py-2 mt-3 font-medium text-gray-700 rounded-lg group text-theme-sm hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-gray-300"
         >
