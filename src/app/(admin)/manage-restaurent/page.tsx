@@ -1,0 +1,11 @@
+import SuperadminDashboardClient from "@/components/superadmin/SuperadminDashboardClient";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Manage Restaurent",
+  description: "Manage restaurent dashboard view",
+};
+
+export default function ManageRestaurentPage() {
+  return <SuperadminDashboardClient />;
+}
