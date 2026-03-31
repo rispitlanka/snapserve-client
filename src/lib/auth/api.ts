@@ -337,17 +337,27 @@ export const createRestaurantAdmin = async (
   accessToken: string,
   payload: { restaurantId: string; name: string; password: string }
 ) => {
-  const response = await makeRequest(`${AUTH_API_BASE_URL}/auth/register`, {
+  const response = await makeRequest(`${AUTH_API_BASE_URL}/users/admins`, {
     method: "POST",
     headers: getAuthHeaders(accessToken),
-    body: JSON.stringify({
-      ...payload,
-      role: "admin",
-    }),
+    body: JSON.stringify(payload),
   });
 
   if (!response.ok) {
     throw new Error(await parseApiError(response, "Failed to create restaurant admin."));
+  }
+
+  return (await response.json()) as unknown;
+};
+
+export const listRestaurantAdmins = async (accessToken: string) => {
+  const response = await makeRequest(`${AUTH_API_BASE_URL}/users/admins`, {
+    method: "GET",
+    headers: getAuthHeaders(accessToken),
+  });
+
+  if (!response.ok) {
+    throw new Error(await parseApiError(response, "Failed to load restaurant admins."));
   }
 
   return (await response.json()) as unknown;

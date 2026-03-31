@@ -4,6 +4,7 @@ import {
   createRestaurant,
   createRestaurantAdmin,
   getAuthSession,
+  listRestaurantAdmins,
   listRestaurants,
 } from "@/lib/auth";
 import { useEffect, useState } from "react";
@@ -31,6 +32,7 @@ export default function SuperadminDashboardClient() {
   const [selectedRestaurantId, setSelectedRestaurantId] = useState("");
   const [createdAdmins, setCreatedAdmins] = useState<CreatedAdmin[]>([]);
   const [loading, setLoading] = useState(false);
+  const [adminLoading, setAdminLoading] = useState(false);
 
   const isValidAdminName = (value: string) => {
     const trimmed = value.trim();
@@ -66,6 +68,34 @@ export default function SuperadminDashboardClient() {
       setError("Failed to load restaurants.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadRestaurantAdmins = async () => {
+    setAdminLoading(true);
+    setAdminError("");
+    try {
+      const session = getAuthSession();
+      if (!session) throw new Error("Session not found");
+      const rawData = await listRestaurantAdmins(session.accessToken);
+      const list = (
+        Array.isArray(rawData)
+          ? rawData
+          : Array.isArray((rawData as { data?: unknown[] })?.data)
+          ? (rawData as { data: unknown[] }).data
+          : []
+      ) as Array<Record<string, unknown>>;
+
+      const mapped = list.map((item) => ({
+        name: String(item.name ?? item.username ?? item.userName ?? "").trim(),
+        restaurantId: String(item.restaurantId ?? item.restaurant_id ?? item.businessId ?? item.business_id ?? "").trim(),
+      }));
+
+      setCreatedAdmins(mapped.filter((admin) => admin.name && admin.restaurantId));
+    } catch {
+      setAdminError("Failed to load restaurant admins.");
+    } finally {
+      setAdminLoading(false);
     }
   };
 
@@ -132,13 +162,7 @@ export default function SuperadminDashboardClient() {
         password: adminPassword.trim(),
       });
 
-      setCreatedAdmins((prev) => [
-        {
-          name: trimmedAdminName,
-          restaurantId: trimmedRestaurantId,
-        },
-        ...prev,
-      ]);
+      await loadRestaurantAdmins();
       setAdminName("");
       setAdminPassword("");
       setAdminSuccess("Restaurant admin created successfully.");
@@ -149,7 +173,13 @@ export default function SuperadminDashboardClient() {
 
   useEffect(() => {
     loadRestaurants();
+    loadRestaurantAdmins();
   }, []);
+
+  const getRestaurantNameById = (restaurantId: string) => {
+    const restaurant = restaurants.find((item) => item.restaurantId === restaurantId);
+    return restaurant?.name || "Unknown Restaurant";
+  };
 
   return (
     <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/3">
@@ -309,22 +339,37 @@ export default function SuperadminDashboardClient() {
             >
               Add Restaurant Admin
             </button>
+          </div>
+        </div>
 
-            {createdAdmins.length > 0 ? (
-              <div className="rounded-lg border border-gray-100 p-3 text-sm dark:border-gray-700">
-                <p className="mb-2 font-medium text-gray-800 dark:text-gray-100">Recently Added Admins</p>
-                <ul className="space-y-1">
-                  {createdAdmins.map((admin, index) => (
-                    <li
-                      key={`${admin.restaurantId}-${admin.name}-${index}`}
-                      className="text-gray-600 dark:text-gray-300"
-                    >
-                      {admin.name} - {admin.restaurantId}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ) : null}
+        <div>
+          <h2 className="mb-3 text-sm font-semibold text-gray-800 dark:text-white/90">
+            Restaurant Admin List
+          </h2>
+          <div className="rounded-xl border border-gray-200 p-4 dark:border-gray-800">
+            {adminLoading ? (
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                Loading restaurant admins...
+              </p>
+            ) : createdAdmins.length === 0 ? (
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                No restaurant admins found.
+              </p>
+            ) : (
+              <ul className="space-y-2">
+                {createdAdmins.map((admin, index) => (
+                  <li
+                    key={`${admin.restaurantId}-${admin.name}-${index}`}
+                    className="rounded-lg border border-gray-100 px-3 py-2 text-sm dark:border-gray-700"
+                  >
+                    <span className="block text-gray-800 dark:text-gray-100">{admin.name}</span>
+                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                      {getRestaurantNameById(admin.restaurantId)} ({admin.restaurantId})
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         </div>
       </div>
