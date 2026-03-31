@@ -1,5 +1,5 @@
 export {
-    createRestaurant, createRestaurantAdmin, listRestaurants,
+    createRestaurant, createRestaurantAdmin, listRestaurantAdmins, listRestaurants,
     login,
     logout,
     parseAuthSession,
