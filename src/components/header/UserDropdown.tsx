@@ -11,11 +11,20 @@ import React, { useEffect, useState } from "react";
 import { Dropdown } from "../ui/dropdown/Dropdown";
 import { DropdownItem } from "../ui/dropdown/DropdownItem";
 
+const ROLE_AVATAR_MAP: Record<UserRole, string> = {
+  superadmin: "/images/user/owner.jpg",
+  admin: "/images/user/user-11.jpg",
+  cashier: "/images/user/user-21.jpg",
+};
+
+const DEFAULT_AVATAR = "/images/user/user-01.jpg";
+
 export default function UserDropdown() {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [userName, setUserName] = useState("Guest User");
   const [userRole, setUserRole] = useState<UserRole | null>(null);
+  const [avatarSrc, setAvatarSrc] = useState(DEFAULT_AVATAR);
 
   useEffect(() => {
     const session = getAuthSession();
@@ -25,7 +34,18 @@ export default function UserDropdown() {
     } else if (session.user?.restaurantId) {
       setUserName(session.user.restaurantId);
     }
-    if (session.user?.role) setUserRole(session.user.role as UserRole);
+    if (session.user?.role) {
+      const role = session.user.role as UserRole;
+      setUserRole(role);
+      setAvatarSrc(ROLE_AVATAR_MAP[role] ?? DEFAULT_AVATAR);
+    }
+
+    const userWithImage = session.user as { image?: string; avatar?: string };
+    if (userWithImage.image) {
+      setAvatarSrc(userWithImage.image);
+    } else if (userWithImage.avatar) {
+      setAvatarSrc(userWithImage.avatar);
+    }
   }, []);
 
 function toggleDropdown(e: React.MouseEvent<HTMLButtonElement, MouseEvent>) {
@@ -46,8 +66,14 @@ function toggleDropdown(e: React.MouseEvent<HTMLButtonElement, MouseEvent>) {
           <Image
             width={44}
             height={44}
-            src="/images/user/owner.jpg"
-            alt="User"
+            src={avatarSrc}
+            alt={`${userName} profile`}
+            onError={() => {
+              if (avatarSrc !== DEFAULT_AVATAR) {
+                setAvatarSrc(DEFAULT_AVATAR);
+              }
+            }}
+            className="h-11 w-11 rounded-full object-cover"
           />
         </span>
 

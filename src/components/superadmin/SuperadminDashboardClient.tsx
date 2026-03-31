@@ -2,6 +2,7 @@
 
 import {
   createRestaurant,
+  createRestaurantAdmin,
   getAuthSession,
   listRestaurants,
 } from "@/lib/auth";
@@ -13,12 +14,28 @@ type Restaurant = {
   isActive: boolean;
 };
 
+type CreatedAdmin = {
+  name: string;
+  restaurantId: string;
+};
+
 export default function SuperadminDashboardClient() {
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [name, setName] = useState("");
   const [isActive, setIsActive] = useState(true);
   const [error, setError] = useState("");
+  const [adminError, setAdminError] = useState("");
+  const [adminSuccess, setAdminSuccess] = useState("");
+  const [adminName, setAdminName] = useState("");
+  const [adminPassword, setAdminPassword] = useState("");
+  const [selectedRestaurantId, setSelectedRestaurantId] = useState("");
+  const [createdAdmins, setCreatedAdmins] = useState<CreatedAdmin[]>([]);
   const [loading, setLoading] = useState(false);
+
+  const isValidAdminName = (value: string) => {
+    const trimmed = value.trim();
+    return /^[A-Za-z][A-Za-z0-9 ._-]{2,49}$/.test(trimmed);
+  };
 
   const loadRestaurants = async () => {
     setLoading(true);
@@ -70,6 +87,66 @@ export default function SuperadminDashboardClient() {
     }
   };
 
+  const handleAddRestaurantAdmin = async () => {
+    const trimmedAdminName = adminName.trim();
+    const trimmedRestaurantId = selectedRestaurantId.trim();
+
+    setAdminError("");
+    setAdminSuccess("");
+
+    if (!trimmedRestaurantId) {
+      setAdminError("Select a restaurant.");
+      return;
+    }
+
+    if (!isValidAdminName(trimmedAdminName)) {
+      setAdminError(
+        "Admin name must start with a letter and be 3-50 characters (letters, numbers, space, . _ -)."
+      );
+      return;
+    }
+
+    if (!adminPassword.trim() || adminPassword.trim().length < 6) {
+      setAdminError("Admin password must be at least 6 characters.");
+      return;
+    }
+
+    const duplicateName = createdAdmins.some(
+      (admin) =>
+        admin.restaurantId === trimmedRestaurantId &&
+        admin.name.toLowerCase() === trimmedAdminName.toLowerCase()
+    );
+
+    if (duplicateName) {
+      setAdminError("This admin name is already added for the selected restaurant.");
+      return;
+    }
+
+    try {
+      const session = getAuthSession();
+      if (!session) throw new Error("Session not found");
+
+      await createRestaurantAdmin(session.accessToken, {
+        restaurantId: trimmedRestaurantId,
+        name: trimmedAdminName,
+        password: adminPassword.trim(),
+      });
+
+      setCreatedAdmins((prev) => [
+        {
+          name: trimmedAdminName,
+          restaurantId: trimmedRestaurantId,
+        },
+        ...prev,
+      ]);
+      setAdminName("");
+      setAdminPassword("");
+      setAdminSuccess("Restaurant admin created successfully.");
+    } catch {
+      setAdminError("Failed to create restaurant admin.");
+    }
+  };
+
   useEffect(() => {
     loadRestaurants();
   }, []);
@@ -77,12 +154,13 @@ export default function SuperadminDashboardClient() {
   return (
     <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/3">
       <h1 className="text-2xl font-semibold text-gray-800 dark:text-white/90">
-        Superadmin Dashboard
+        Manage Restaurent
       </h1>
-      <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-        Manage restaurants from API.
-      </p>
       {error ? <p className="mt-2 text-sm text-error-500">{error}</p> : null}
+      {adminError ? <p className="mt-2 text-sm text-error-500">{adminError}</p> : null}
+      {adminSuccess ? (
+        <p className="mt-2 text-sm text-success-600 dark:text-success-400">{adminSuccess}</p>
+      ) : null}
 
       <div className="mt-6 grid gap-6 md:grid-cols-2">
         <div>
@@ -124,13 +202,6 @@ export default function SuperadminDashboardClient() {
               className="inline-flex items-center justify-center rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50"
             >
               Add Restaurant
-            </button>
-            <button
-              type="button"
-              onClick={loadRestaurants}
-              className="ml-2 inline-flex items-center justify-center rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800"
-            >
-              Refresh List
             </button>
           </div>
         </div>
@@ -178,6 +249,82 @@ export default function SuperadminDashboardClient() {
                 ))}
               </ul>
             )}
+          </div>
+        </div>
+
+        <div>
+          <h2 className="mb-3 text-sm font-semibold text-gray-800 dark:text-white/90">
+            Create Restaurant Admin
+          </h2>
+          <div className="space-y-4 rounded-xl border border-gray-200 p-4 dark:border-gray-800">
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                Restaurant <span className="text-error-500">*</span>
+              </label>
+              <select
+                value={selectedRestaurantId}
+                onChange={(e) => setSelectedRestaurantId(e.target.value)}
+                className="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+              >
+                <option value="">Select restaurant</option>
+                {restaurants.map((r) => (
+                  <option key={r.restaurantId} value={r.restaurantId}>
+                    {r.name} ({r.restaurantId})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                Admin Name <span className="text-error-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={adminName}
+                onChange={(e) => setAdminName(e.target.value)}
+                placeholder="John Admin"
+                className="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
+              />
+            </div>
+
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                Admin Password <span className="text-error-500">*</span>
+              </label>
+              <input
+                type="password"
+                value={adminPassword}
+                onChange={(e) => setAdminPassword(e.target.value)}
+                placeholder="Minimum 6 characters"
+                className="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
+              />
+            </div>
+
+            <button
+              type="button"
+              onClick={handleAddRestaurantAdmin}
+              disabled={!selectedRestaurantId.trim() || !adminName.trim() || !adminPassword.trim()}
+              className="inline-flex items-center justify-center rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Add Restaurant Admin
+            </button>
+
+            {createdAdmins.length > 0 ? (
+              <div className="rounded-lg border border-gray-100 p-3 text-sm dark:border-gray-700">
+                <p className="mb-2 font-medium text-gray-800 dark:text-gray-100">Recently Added Admins</p>
+                <ul className="space-y-1">
+                  {createdAdmins.map((admin, index) => (
+                    <li
+                      key={`${admin.restaurantId}-${admin.name}-${index}`}
+                      className="text-gray-600 dark:text-gray-300"
+                    >
+                      {admin.name} - {admin.restaurantId}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
           </div>
         </div>
       </div>

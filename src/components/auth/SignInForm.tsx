@@ -19,7 +19,6 @@ export default function SignInForm() {
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [isChecked, setIsChecked] = useState(false);
-  const [isSuperadmin, setIsSuperadmin] = useState(false);
   const [restaurantId, setRestaurantId] = useState("");
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
@@ -40,18 +39,15 @@ export default function SignInForm() {
     setIsSubmitting(true);
 
     try {
-      // Validate required fields based on login type
-      if (!isSuperadmin) {
-        if (!restaurantId.trim()) {
-          setError("Business ID is required.");
-          setIsSubmitting(false);
-          return;
-        }
-        if (!name.trim()) {
-          setError("Username is required.");
-          setIsSubmitting(false);
-          return;
-        }
+      const hasRestaurantOrName = Boolean(restaurantId.trim() || name.trim());
+      const hasBothRestaurantAndName = Boolean(restaurantId.trim() && name.trim());
+
+      // Superadmin flow: allow password-only login.
+      // Restaurant-scoped flow: if one identity field is entered, require both.
+      if (hasRestaurantOrName && !hasBothRestaurantAndName) {
+        setError("Enter both Business ID and Username, or leave both empty.");
+        setIsSubmitting(false);
+        return;
       }
 
       if (!password) {
@@ -61,8 +57,8 @@ export default function SignInForm() {
       }
 
       const response = await login({
-        restaurantId: isSuperadmin ? undefined : restaurantId.trim(),
-        name: isSuperadmin ? undefined : name.trim(),
+        restaurantId: hasBothRestaurantAndName ? restaurantId.trim() : undefined,
+        name: hasBothRestaurantAndName ? name.trim() : undefined,
         password,
       });
 
@@ -88,58 +84,32 @@ export default function SignInForm() {
               Sign In
             </h1>
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              {isSuperadmin
-                ? "Enter your password to sign in."
-                : "Enter your Business Id, Username, and Password to sign in!"}
+              Enter your Business Id, Username, and Password to sign in.
+              Superadmin can sign in using password only.
             </p>
           </div>
           <div>
             <form onSubmit={handleSignIn}>
               <div className="space-y-6">
-                {/* Business ID and Username fields - hidden for superadmin */}
-                {!isSuperadmin && (
-                  <>
-                    <div>
-                      <Label>
-                        Business Id <span className="text-error-500">*</span>
-                      </Label>
-                      <Input
-                        placeholder="Enter your business id"
-                        type="text"
-                        value={restaurantId}
-                        onChange={(e) => setRestaurantId(e.target.value)}
-                        disabled={isSubmitting}
-                      />
-                    </div>
-                    <div>
-                      <Label>
-                        Username <span className="text-error-500">*</span>
-                      </Label>
-                      <Input
-                        placeholder="Enter your username"
-                        type="text"
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        disabled={isSubmitting}
-                      />
-                    </div>
-                  </>
-                )}
-
-                {/* Superadmin toggle */}
-                <div className="flex flex-col gap-3">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={isSuperadmin}
-                      onChange={(e) => setIsSuperadmin(e.target.checked)}
-                      disabled={isSubmitting}
-                      className="w-4 h-4 rounded"
-                    />
-                    <span className="text-xs text-gray-600 dark:text-gray-400">
-                      Admin only: Sign in without Business ID and Username
-                    </span>
-                  </label>
+                <div>
+                  <Label>Business Id</Label>
+                  <Input
+                    placeholder="Enter your business id"
+                    type="text"
+                    value={restaurantId}
+                    onChange={(e) => setRestaurantId(e.target.value)}
+                    disabled={isSubmitting}
+                  />
+                </div>
+                <div>
+                  <Label>Username</Label>
+                  <Input
+                    placeholder="Enter your username"
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    disabled={isSubmitting}
+                  />
                 </div>
 
                 <div>

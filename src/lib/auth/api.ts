@@ -332,3 +332,23 @@ export const createRestaurant = async (
 
   return (await response.json()) as unknown;
 };
+
+export const createRestaurantAdmin = async (
+  accessToken: string,
+  payload: { restaurantId: string; name: string; password: string }
+) => {
+  const response = await makeRequest(`${AUTH_API_BASE_URL}/auth/register`, {
+    method: "POST",
+    headers: getAuthHeaders(accessToken),
+    body: JSON.stringify({
+      ...payload,
+      role: "admin",
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(await parseApiError(response, "Failed to create restaurant admin."));
+  }
+
+  return (await response.json()) as unknown;
+};

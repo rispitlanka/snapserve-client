@@ -5,17 +5,11 @@ import { usePathname } from "next/navigation";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useSidebar } from "../context/SidebarContext";
 import {
-  // BoxCubeIcon,
-  // CalenderIcon,
-  ChevronDownIcon,
-  GridIcon,
-  HorizontaLDots,
-  // ListIcon,
-  // PageIcon,
-  // PieChartIcon,
-  // PlugInIcon,
-  // TableIcon,
-  // UserCircleIcon,
+    // BoxCubeIcon,
+    // CalenderIcon,
+    ChevronDownIcon,
+    GridIcon,
+    HorizontaLDots,
 } from "../icons/index";
 // import SidebarWidget from "./SidebarWidget";
 
@@ -36,6 +30,11 @@ const navItems: NavItem[] = [
     //   { name: "Admin Dashboard", path: "/admin-dashboard", pro: false },
     //   { name: "Cashier Dashboard", path: "/cashier-dashboard", pro: false },
     // ],
+  },
+  {
+    icon: <GridIcon />,
+    name: "Manage Restaurent",
+    path: "/manage-restaurent",
   },
   // {
   //   icon: <CalenderIcon />,
@@ -314,26 +313,21 @@ const AppSidebar: React.FC = () => {
       >
         <Link href="/">
           {isExpanded || isHovered || isMobileOpen ? (
-            <>
+            <div className="flex items-center gap-3">
               <Image
-                className="dark:hidden"
-                src="/images/logo/logo.svg"
-                alt="Logo"
-                width={150}
-                height={40}
+                src="/images/logo/logo-icon.svg"
+                alt="Snapserve"
+                width={32}
+                height={32}
               />
-              <Image
-                className="hidden dark:block"
-                src="/images/logo/logo-dark.svg"
-                alt="Logo"
-                width={150}
-                height={40}
-              />
-            </>
+              <span className="text-xl font-semibold text-gray-900 dark:text-white">
+                Snapserve
+              </span>
+            </div>
           ) : (
             <Image
               src="/images/logo/logo-icon.svg"
-              alt="Logo"
+              alt="Snapserve"
               width={32}
               height={32}
             />
