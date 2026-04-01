@@ -1,15 +1,17 @@
 "use client";
+import type { UserRole } from "@/lib/auth";
+import { getAuthSession } from "@/lib/auth";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useSidebar } from "../context/SidebarContext";
 import {
-    // BoxCubeIcon,
-    // CalenderIcon,
-    ChevronDownIcon,
-    GridIcon,
-    HorizontaLDots,
+  // BoxCubeIcon,
+  // CalenderIcon,
+  ChevronDownIcon,
+  GridIcon,
+  HorizontaLDots,
 } from "../icons/index";
 // import SidebarWidget from "./SidebarWidget";
 
@@ -17,6 +19,7 @@ type NavItem = {
   name: string;
   icon: React.ReactNode;
   path?: string;
+  roles?: UserRole[];
   subItems?: { name: string; path: string; pro?: boolean; new?: boolean }[];
 };
 
@@ -35,6 +38,7 @@ const navItems: NavItem[] = [
     icon: <GridIcon />,
     name: "Manage Restaurent",
     path: "/manage-restaurent",
+    roles: ["superadmin"],
   },
   // {
   //   icon: <CalenderIcon />,
@@ -100,6 +104,10 @@ const navItems: NavItem[] = [
 const AppSidebar: React.FC = () => {
   const { isExpanded, isMobileOpen, isHovered, setIsHovered } = useSidebar();
   const pathname = usePathname();
+  const userRole = getAuthSession()?.user?.role;
+  const visibleNavItems = navItems.filter(
+    (item) => !item.roles || (!!userRole && item.roles.includes(userRole))
+  );
 
   const renderMenuItems = (
     navItems: NavItem[],
@@ -351,7 +359,7 @@ const AppSidebar: React.FC = () => {
                   <HorizontaLDots />
                 )}
               </h2>
-              {renderMenuItems(navItems, "main")}
+              {renderMenuItems(visibleNavItems, "main")}
             </div>
 
             {/* <div className="">

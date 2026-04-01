@@ -1,6 +1,5 @@
 export {
-    createRestaurant, createRestaurantAdmin, listRestaurantAdmins, listRestaurants,
-    login,
+    createRestaurant, createRestaurantAdmin, listRegisters, listRestaurantAdmins, listRestaurants, login,
     logout,
     parseAuthSession,
     refreshSession,
@@ -9,5 +8,5 @@ export {
 export { AUTH_API_BASE_URL, AUTH_STORAGE_KEY, ROLE_DASHBOARD_ROUTE } from "./constants";
 export { clearAuthSession, getAuthSession, saveAuthSession } from "./session";
 export { REGISTER_OPTIONS } from "./types";
-export type { AuthSession, AuthUser, RegisterOption, Restaurant, UserRole } from "./types";
+export type { AuthSession, AuthUser, Register, RegisterOption, Restaurant, UserRole } from "./types";
 

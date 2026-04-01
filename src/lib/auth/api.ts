@@ -1,5 +1,5 @@
 import { AUTH_API_BASE_URL } from "./constants";
-import type { AuthSession, UserRole } from "./types";
+import type { AuthSession, Register, UserRole } from "./types";
 
 const normalizeRole = (value: unknown): UserRole => {
   if (typeof value !== "string") return "cashier";
@@ -152,18 +152,21 @@ const makeRequest = async (url: string, options: RequestInit): Promise<Response>
 
     if (!response.ok) {
       const errorBody = await response.clone().text();
-      console.error(`API Error [${response.status}]:`, {
-        url,
-        status: response.status,
-        statusText: response.statusText,
-        headers: {
-          "Content-Type": response.headers.get("Content-Type"),
-          "Access-Control-Allow-Origin": response.headers.get(
-            "Access-Control-Allow-Origin"
-          ),
-        },
-        body: errorBody,
-      });
+      // 401/403 can happen during role-based flows; avoid noisy console errors.
+      if (response.status !== 401 && response.status !== 403) {
+        console.error(`API Error [${response.status}]:`, {
+          url,
+          status: response.status,
+          statusText: response.statusText,
+          headers: {
+            "Content-Type": response.headers.get("Content-Type"),
+            "Access-Control-Allow-Origin": response.headers.get(
+              "Access-Control-Allow-Origin"
+            ),
+          },
+          body: errorBody,
+        });
+      }
     }
 
     return response;
@@ -293,7 +296,7 @@ export const selectRegister = async (accessToken: string, register: string) => {
   const response = await makeRequest(`${AUTH_API_BASE_URL}/auth/select-register`, {
     method: "POST",
     headers: getAuthHeaders(accessToken),
-    body: JSON.stringify({ register, registerId: register }),
+    body: JSON.stringify({ registerId: register }),
   });
 
   if (!response.ok) {
@@ -301,6 +304,61 @@ export const selectRegister = async (accessToken: string, register: string) => {
   }
 
   return (await response.json()) as unknown;
+};
+
+const mapRegister = (raw: unknown): Register | null => {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+
+  const obj = raw as Record<string, unknown>;
+  const id = getString(obj, ["id"]);
+  const restaurantId = getString(obj, ["restaurantId", "restaurant_id"]);
+  const name = getString(obj, ["name"]);
+
+  if (!id || !name) return null;
+
+  return {
+    id,
+    restaurantId,
+    name,
+    isActive: getBoolean(obj, ["isActive", "is_active"], true),
+    occupiedBySessionId:
+      getString(obj, ["occupiedBySessionId", "occupied_by_session_id"]) || null,
+    createdAt: getString(obj, ["createdAt", "created_at"]),
+    updatedAt: getString(obj, ["updatedAt", "updated_at"]),
+    occupiedBySession: obj.occupiedBySession ?? null,
+  };
+};
+
+export const listRegisters = async (accessToken: string, restaurantId?: string) => {
+  let response = await makeRequest(`${AUTH_API_BASE_URL}/registers`, {
+    method: "GET",
+    headers: getAuthHeaders(accessToken),
+  });
+
+  if (!response.ok && response.status === 403 && restaurantId) {
+    const scopedUrl = `${AUTH_API_BASE_URL}/registers?restaurantId=${encodeURIComponent(
+      restaurantId
+    )}`;
+    response = await makeRequest(scopedUrl, {
+      method: "GET",
+      headers: getAuthHeaders(accessToken),
+    });
+  }
+
+  if (!response.ok) {
+    throw new Error(await parseApiError(response, "Failed to load registers."));
+  }
+
+  const body = (await response.json()) as unknown;
+  const data =
+    Array.isArray(body)
+      ? body
+      : (body as { data?: unknown; registers?: unknown })?.data ??
+        (body as { data?: unknown; registers?: unknown })?.registers;
+
+  if (!Array.isArray(data)) return [];
+
+  return data.map(mapRegister).filter((item): item is Register => item !== null);
 };
 
 export const listRestaurants = async (accessToken: string) => {
