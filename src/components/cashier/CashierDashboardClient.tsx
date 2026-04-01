@@ -1,12 +1,13 @@
 "use client";
 
 import {
-  AuthSession,
-  getAuthSession,
-  REGISTER_OPTIONS,
-  ROLE_DASHBOARD_ROUTE,
-  saveAuthSession,
-  selectRegister,
+    AuthSession,
+    getAuthSession,
+    listRegisters,
+    Register,
+    ROLE_DASHBOARD_ROUTE,
+    saveAuthSession,
+    selectRegister,
 } from "@/lib/auth";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -15,25 +16,55 @@ export default function CashierDashboardClient() {
   const router = useRouter();
   const [authSession, setAuthSession] = useState<AuthSession | null>(null);
   const [selectedRegister, setSelectedRegister] = useState("");
+  const [registers, setRegisters] = useState<Register[]>([]);
+  const [isLoadingRegisters, setIsLoadingRegisters] = useState(false);
   const [isSavingRegister, setIsSavingRegister] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    const session = getAuthSession();
-    if (!session) {
-      router.replace("/signin");
-      return;
-    }
+    const loadSessionAndRegisters = async () => {
+      const session = getAuthSession();
+      if (!session) {
+        router.replace("/signin");
+        return;
+      }
 
-    if (session.user.role !== "cashier") {
-      router.replace(ROLE_DASHBOARD_ROUTE[session.user.role]);
-      return;
-    }
+      if (session.user.role !== "cashier") {
+        router.replace(ROLE_DASHBOARD_ROUTE[session.user.role]);
+        return;
+      }
 
-    setAuthSession(session);
-    if (session.user.register) {
-      setSelectedRegister(session.user.register);
-    }
+      setAuthSession(session);
+      setIsLoadingRegisters(true);
+      try {
+        const availableRegisters = await listRegisters(
+          session.accessToken,
+          session.user.restaurantId
+        );
+        setRegisters(availableRegisters);
+
+        if (session.user.registerId) {
+          setSelectedRegister(session.user.registerId);
+        } else if (session.user.register) {
+          const selectedByName = availableRegisters.find(
+            (item) => item.name === session.user.register
+          );
+          if (selectedByName) {
+            setSelectedRegister(selectedByName.id);
+          }
+        }
+      } catch (err) {
+        setError(
+          err instanceof Error
+            ? err.message
+            : "Failed to load registers. Please try again."
+        );
+      } finally {
+        setIsLoadingRegisters(false);
+      }
+    };
+
+    void loadSessionAndRegisters();
   }, [router]);
 
   const handleSelectRegister = async () => {
@@ -42,6 +73,9 @@ export default function CashierDashboardClient() {
     setIsSavingRegister(true);
 
     try {
+      const selectedRegisterObj = registers.find(
+        (register) => register.id === selectedRegister
+      );
       await selectRegister(authSession.accessToken, selectedRegister);
       const updatedSession: AuthSession = {
         ...authSession,
@@ -49,7 +83,7 @@ export default function CashierDashboardClient() {
         registerId: selectedRegister,
         user: {
           ...authSession.user,
-          register: selectedRegister,
+          register: selectedRegisterObj?.name || selectedRegister,
           registerId: selectedRegister,
         },
       };
@@ -85,17 +119,29 @@ export default function CashierDashboardClient() {
             className="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:focus:border-brand-800"
           >
             <option value="">Select register</option>
-            {REGISTER_OPTIONS.map((register) => (
-              <option key={register} value={register}>
-                {register}
+            {registers.map((register) => (
+              <option
+                key={register.id}
+                value={register.id}
+                disabled={!register.isActive || Boolean(register.occupiedBySessionId)}
+              >
+                {register.name}
+                {!register.isActive ? " (Inactive)" : ""}
+                {register.occupiedBySessionId ? " (Occupied)" : ""}
               </option>
             ))}
           </select>
+          {isLoadingRegisters ? (
+            <p className="mt-3 text-sm text-gray-500 dark:text-gray-400">Loading registers...</p>
+          ) : null}
+          {!isLoadingRegisters && registers.length === 0 ? (
+            <p className="mt-3 text-sm text-gray-500 dark:text-gray-400">No registers available for this account.</p>
+          ) : null}
           <button
             type="button"
             onClick={handleSelectRegister}
             className="mt-4 inline-flex items-center justify-center rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50"
-            disabled={!selectedRegister || isSavingRegister}
+            disabled={!selectedRegister || isSavingRegister || isLoadingRegisters}
           >
             {isSavingRegister ? "Saving..." : "Continue"}
           </button>

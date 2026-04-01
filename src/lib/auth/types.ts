@@ -23,6 +23,17 @@ export type Restaurant = {
   isActive: boolean;
 };
 
+export type Register = {
+  id: string;
+  restaurantId: string;
+  name: string;
+  isActive: boolean;
+  occupiedBySessionId: string | null;
+  createdAt: string;
+  updatedAt: string;
+  occupiedBySession?: unknown | null;
+};
+
 export type RegisterOption = (typeof REGISTER_OPTIONS)[number];
 
 export const REGISTER_OPTIONS = ["Terminal 1", "Terminal 2", "Terminal 3"] as const;
