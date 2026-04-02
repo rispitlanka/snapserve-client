@@ -14,6 +14,7 @@ import {
 } from "@/lib/auth";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
+import toast from "react-hot-toast";
 
 export default function SignInForm() {
   const router = useRouter();
@@ -64,12 +65,15 @@ export default function SignInForm() {
 
       const session = parseAuthSession(response);
       saveAuthSession(session);
+      toast.success("Signed in successfully.");
 
       // Redirect based on user role to their respective dashboard
       const redirectTo = ROLE_DASHBOARD_ROUTE[session.user.role];
       router.push(redirectTo);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Sign-in failed. Please try again.");
+      const message = err instanceof Error ? err.message : "Sign-in failed. Please try again.";
+      setError(message);
+      toast.error(message);
     } finally {
       setIsSubmitting(false);
     }
@@ -152,7 +156,7 @@ export default function SignInForm() {
                   </div>
                 ) : null}
 
-                <Button className="w-full" size="sm" disabled={isSubmitting}>
+                <Button className="w-full" size="sm" type="submit" disabled={isSubmitting}>
                   {isSubmitting ? "Signing in..." : "Sign in"}
                 </Button>
               </div>

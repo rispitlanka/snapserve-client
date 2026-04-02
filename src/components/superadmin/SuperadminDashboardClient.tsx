@@ -1,13 +1,15 @@
 "use client";
 
+import { Modal } from "@/components/ui/modal";
 import {
-    createRestaurant,
-    createRestaurantAdmin,
-    getAuthSession,
-    listRestaurantAdmins,
-    listRestaurants,
+  createRestaurant,
+  createRestaurantAdmin,
+  getAuthSession,
+  listRestaurantAdmins,
+  listRestaurants,
 } from "@/lib/auth";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import toast from "react-hot-toast";
 
 type Restaurant = {
   id: string;
@@ -46,6 +48,33 @@ export default function SuperadminDashboardClient() {
   const isValidAdminName = (value: string) => {
     const trimmed = value.trim();
     return /^[A-Za-z][A-Za-z0-9 ._-]{2,49}$/.test(trimmed);
+  };
+
+  const openRestaurantModal = () => {
+    setError("");
+    setShowAddRestaurantForm(true);
+  };
+
+  const closeRestaurantModal = () => {
+    setName("");
+    setIsActive(true);
+    setError("");
+    setShowAddRestaurantForm(false);
+  };
+
+  const openAdminModal = () => {
+    setAdminError("");
+    setAdminSuccess("");
+    setShowAddAdminForm(true);
+  };
+
+  const closeAdminModal = () => {
+    setAdminName("");
+    setAdminPassword("");
+    setSelectedRestaurantId("");
+    setAdminError("");
+    setAdminSuccess("");
+    setShowAddAdminForm(false);
   };
 
   const loadRestaurants = async () => {
@@ -120,12 +149,13 @@ export default function SuperadminDashboardClient() {
         name: name.trim(),
         isActive,
       });
-      setName("");
-      setIsActive(true);
-      setShowAddRestaurantForm(false);
+      toast.success("Restaurant created successfully.");
+      closeRestaurantModal();
       await loadRestaurants();
-    } catch {
-      setError("Failed to create restaurant.");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to create restaurant.";
+      setError(message);
+      toast.error(message);
     }
   };
 
@@ -175,12 +205,14 @@ export default function SuperadminDashboardClient() {
       });
 
       await loadRestaurantAdmins();
-      setAdminName("");
-      setAdminPassword("");
-      setShowAddAdminForm(false);
+      closeAdminModal();
       setAdminSuccess("Restaurant admin created successfully.");
-    } catch {
-      setAdminError("Failed to create restaurant admin.");
+      toast.success("Restaurant admin created successfully.");
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Failed to create restaurant admin.";
+      setAdminError(message);
+      toast.error(message);
     }
   };
 
@@ -189,10 +221,10 @@ export default function SuperadminDashboardClient() {
     loadRestaurantAdmins();
   }, []);
 
-  const getRestaurantNameById = (restaurantId: string) => {
+  const getRestaurantNameById = useCallback((restaurantId: string) => {
     const restaurant = restaurants.find((item) => item.restaurantId === restaurantId);
     return restaurant?.name || "Unknown Restaurant";
-  };
+  }, [restaurants]);
 
   const filteredRestaurants = useMemo(() => {
     const query = restaurantSearch.trim().toLowerCase();
@@ -257,51 +289,12 @@ export default function SuperadminDashboardClient() {
             </h2>
             <button
               type="button"
-              onClick={() => setShowAddRestaurantForm((prev) => !prev)}
+              onClick={openRestaurantModal}
               className="inline-flex items-center justify-center rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600"
             >
               Add Restaurant
             </button>
           </div>
-
-          {showAddRestaurantForm ? (
-            <div className="space-y-4 rounded-xl border border-gray-200 p-4 dark:border-gray-800">
-              <div>
-                <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Name <span className="text-error-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Restaurant name"
-                  className="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
-                />
-              </div>
-              <div className="flex items-center gap-3">
-                <input
-                  id="isActive"
-                  type="checkbox"
-                  checked={isActive}
-                  onChange={(e) => setIsActive(e.target.checked)}
-                  className="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500"
-                />
-                <label htmlFor="isActive" className="text-sm text-gray-700 dark:text-gray-300">
-                  Is Active
-                </label>
-              </div>
-              <div className="flex justify-end">
-                <button
-                  type="button"
-                  onClick={handleAddRestaurant}
-                  disabled={!name.trim()}
-                  className="inline-flex items-center justify-center rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  Save Restaurant
-                </button>
-              </div>
-            </div>
-          ) : null}
 
           <div className="rounded-xl border border-gray-200 p-4 dark:border-gray-800">
             <div className="mb-4">
@@ -394,68 +387,12 @@ export default function SuperadminDashboardClient() {
             </h2>
             <button
               type="button"
-              onClick={() => setShowAddAdminForm((prev) => !prev)}
+              onClick={openAdminModal}
               className="inline-flex items-center justify-center rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600"
             >
               Add Restaurant Admin
             </button>
           </div>
-
-          {showAddAdminForm ? (
-            <div className="space-y-4 rounded-xl border border-gray-200 p-4 dark:border-gray-800">
-              <div>
-                <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Restaurant <span className="text-error-500">*</span>
-                </label>
-                <select
-                  value={selectedRestaurantId}
-                  onChange={(e) => setSelectedRestaurantId(e.target.value)}
-                  className="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
-                >
-                  <option value="">Select restaurant</option>
-                  {restaurants.map((restaurant) => (
-                    <option key={restaurant.id} value={restaurant.restaurantId}>
-                      {restaurant.name} ({restaurant.restaurantId})
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Admin Name <span className="text-error-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={adminName}
-                  onChange={(e) => setAdminName(e.target.value)}
-                  placeholder="Admin name"
-                  className="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
-                />
-              </div>
-              <div>
-                <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Admin Password <span className="text-error-500">*</span>
-                </label>
-                <input
-                  type="password"
-                  value={adminPassword}
-                  onChange={(e) => setAdminPassword(e.target.value)}
-                  placeholder="Minimum 6 characters"
-                  className="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
-                />
-              </div>
-              <div className="flex justify-end">
-                <button
-                  type="button"
-                  onClick={handleAddRestaurantAdmin}
-                  disabled={!selectedRestaurantId.trim() || !adminName.trim() || !adminPassword.trim()}
-                  className="inline-flex items-center justify-center rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  Save Restaurant Admin
-                </button>
-              </div>
-            </div>
-          ) : null}
 
           <div className="rounded-xl border border-gray-200 p-4 dark:border-gray-800">
             <div className="mb-4">
@@ -531,6 +468,146 @@ export default function SuperadminDashboardClient() {
           </div>
         </section>
       ) : null}
+
+      <Modal
+        isOpen={showAddRestaurantForm}
+        onClose={closeRestaurantModal}
+        className="max-w-[560px] p-4 sm:p-6"
+      >
+        <div className="space-y-5">
+          <div>
+            <h3 className="text-xl font-semibold text-gray-800 dark:text-white/90">
+              Add Restaurant
+            </h3>
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              Create a restaurant record for the superadmin panel.
+            </p>
+          </div>
+
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Name <span className="text-error-500">*</span>
+            </label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Restaurant name"
+              className="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
+            />
+          </div>
+
+          <div className="flex items-center gap-3">
+            <input
+              id="isActive"
+              type="checkbox"
+              checked={isActive}
+              onChange={(e) => setIsActive(e.target.checked)}
+              className="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500"
+            />
+            <label htmlFor="isActive" className="text-sm text-gray-700 dark:text-gray-300">
+              Is Active
+            </label>
+          </div>
+
+          <div className="flex items-center justify-end gap-3">
+            <button
+              type="button"
+              onClick={closeRestaurantModal}
+              className="inline-flex items-center justify-center rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleAddRestaurant}
+              disabled={!name.trim()}
+              className="inline-flex items-center justify-center rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Save Restaurant
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal
+        isOpen={showAddAdminForm}
+        onClose={closeAdminModal}
+        className="max-w-[560px] p-4 sm:p-6"
+      >
+        <div className="space-y-5">
+          <div>
+            <h3 className="text-xl font-semibold text-gray-800 dark:text-white/90">
+              Add Restaurant Admin
+            </h3>
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              Create a restaurant admin and link it to a restaurant.
+            </p>
+          </div>
+
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Restaurant <span className="text-error-500">*</span>
+            </label>
+            <select
+              value={selectedRestaurantId}
+              onChange={(e) => setSelectedRestaurantId(e.target.value)}
+              className="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+            >
+              <option value="">Select restaurant</option>
+              {restaurants.map((restaurant) => (
+                <option key={restaurant.id} value={restaurant.restaurantId}>
+                  {restaurant.name} ({restaurant.restaurantId})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Admin Name <span className="text-error-500">*</span>
+            </label>
+            <input
+              type="text"
+              value={adminName}
+              onChange={(e) => setAdminName(e.target.value)}
+              placeholder="Admin name"
+              className="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
+            />
+          </div>
+
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Admin Password <span className="text-error-500">*</span>
+            </label>
+            <input
+              type="password"
+              value={adminPassword}
+              onChange={(e) => setAdminPassword(e.target.value)}
+              placeholder="Minimum 6 characters"
+              className="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
+            />
+          </div>
+
+          <div className="flex items-center justify-end gap-3">
+            <button
+              type="button"
+              onClick={closeAdminModal}
+              className="inline-flex items-center justify-center rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleAddRestaurantAdmin}
+              disabled={!selectedRestaurantId.trim() || !adminName.trim() || !adminPassword.trim()}
+              className="inline-flex items-center justify-center rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Save Restaurant Admin
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

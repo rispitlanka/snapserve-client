@@ -11,6 +11,7 @@ import {
 } from "@/lib/auth";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+  import toast from "react-hot-toast";
 
 export default function CashierDashboardClient() {
   const router = useRouter();
@@ -89,12 +90,14 @@ export default function CashierDashboardClient() {
       };
       saveAuthSession(updatedSession);
       setAuthSession(updatedSession);
+      toast.success("Register selected successfully.");
     } catch (err) {
-      setError(
+      const message =
         err instanceof Error
           ? err.message
-          : "Failed to select register. Please try again."
-      );
+          : "Failed to select register. Please try again.";
+      setError(message);
+      toast.error(message);
     } finally {
       setIsSavingRegister(false);
     }

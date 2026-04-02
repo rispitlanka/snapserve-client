@@ -1,5 +1,17 @@
 import { AUTH_API_BASE_URL } from "./constants";
-import type { AuthSession, Register, UserRole } from "./types";
+import type {
+  ApiActionResult,
+  AuthSession,
+  ChangePasswordPayload,
+  ChangePasswordResult,
+  CreateStaffPayload,
+  CreateSupplierPayload,
+  Register,
+  Staff,
+  Supplier,
+  UpdateStaffPayload,
+  UserRole,
+} from "./types";
 
 const normalizeRole = (value: unknown): UserRole => {
   if (typeof value !== "string") return "cashier";
@@ -329,6 +341,74 @@ const mapRegister = (raw: unknown): Register | null => {
   };
 };
 
+const getListData = (body: unknown): unknown[] => {
+  if (Array.isArray(body)) return body;
+  if (!body || typeof body !== "object") return [];
+
+  const obj = body as Record<string, unknown>;
+  const candidates = [
+    obj.data,
+    obj.items,
+    obj.results,
+    obj.staff,
+    obj.suppliers,
+    obj.users,
+  ];
+
+  for (const candidate of candidates) {
+    if (Array.isArray(candidate)) return candidate;
+  }
+
+  return [];
+};
+
+const mapStaff = (raw: unknown): Staff | null => {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+
+  const obj = raw as Record<string, unknown>;
+  const id = getString(obj, ["id", "_id", "userId", "user_id"]);
+  const restaurantId = getString(obj, ["restaurantId", "restaurant_id", "businessId", "business_id"]);
+  const name = getString(obj, ["name", "userName", "username", "fullName"]);
+
+  if (!id || !name) return null;
+
+  return {
+    id,
+    restaurantId,
+    name,
+    role: getString(obj, ["role", "userRole", "type"], "cashier"),
+    isActive: getBoolean(obj, ["isActive", "is_active"], true),
+    email: getString(obj, ["email"]) || null,
+    phone: getString(obj, ["phone", "phoneNumber", "phone_number"]) || null,
+    createdAt: getString(obj, ["createdAt", "created_at"]),
+    updatedAt: getString(obj, ["updatedAt", "updated_at"]),
+  };
+};
+
+const mapSupplier = (raw: unknown): Supplier | null => {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+
+  const obj = raw as Record<string, unknown>;
+  const id = getString(obj, ["id", "_id", "supplierId", "supplier_id"]);
+  const restaurantId = getString(obj, ["restaurantId", "restaurant_id", "businessId", "business_id"]);
+  const name = getString(obj, ["name", "supplierName", "supplier_name"]);
+
+  if (!id || !name) return null;
+
+  return {
+    id,
+    restaurantId,
+    name,
+    contactNumber:
+      getString(obj, ["contactNumber", "contact_number", "phone", "phoneNumber", "phone_number"]) ||
+      null,
+    description: getString(obj, ["description"]) || null,
+    isActive: getBoolean(obj, ["isActive", "is_active"], true),
+    createdAt: getString(obj, ["createdAt", "created_at"]),
+    updatedAt: getString(obj, ["updatedAt", "updated_at"]),
+  };
+};
+
 export const listRegisters = async (accessToken: string, restaurantId?: string) => {
   let response = await makeRequest(`${AUTH_API_BASE_URL}/registers`, {
     method: "GET",
@@ -419,4 +499,176 @@ export const listRestaurantAdmins = async (accessToken: string) => {
   }
 
   return (await response.json()) as unknown;
+};
+
+export const changePassword = async (
+  accessToken: string,
+  payload: ChangePasswordPayload
+): Promise<ChangePasswordResult> => {
+  const response = await makeRequest(`${AUTH_API_BASE_URL}/auth/change-password`, {
+    method: "PATCH",
+    headers: getAuthHeaders(accessToken),
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    throw new Error(await parseApiError(response, "Failed to change password."));
+  }
+
+  const body = (await response.json()) as Record<string, unknown>;
+  return {
+    success: getBoolean(body, ["success"], true),
+    message: getString(body, ["message", "detail"], "Password changed successfully."),
+  };
+};
+
+export const listStaff = async (accessToken: string): Promise<Staff[]> => {
+  const response = await makeRequest(`${AUTH_API_BASE_URL}/users/staff/`, {
+    method: "GET",
+    headers: getAuthHeaders(accessToken),
+  });
+
+  if (!response.ok) {
+    throw new Error(await parseApiError(response, "Failed to load staff."));
+  }
+
+  const body = (await response.json()) as unknown;
+  return getListData(body).map(mapStaff).filter((item): item is Staff => item !== null);
+};
+
+export const createStaff = async (
+  accessToken: string,
+  payload: CreateStaffPayload
+): Promise<Staff> => {
+  const response = await makeRequest(`${AUTH_API_BASE_URL}/users/staff/`, {
+    method: "POST",
+    headers: getAuthHeaders(accessToken),
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    throw new Error(await parseApiError(response, "Failed to create staff."));
+  }
+
+  const body = (await response.json()) as unknown;
+  const mapped = mapStaff((body as { data?: unknown })?.data ?? body);
+  if (!mapped) {
+    throw new Error("Unexpected create staff response.");
+  }
+
+  return mapped;
+};
+
+export const updateStaff = async (
+  accessToken: string,
+  staffId: string,
+  payload: UpdateStaffPayload
+): Promise<Staff> => {
+  const response = await makeRequest(
+    `${AUTH_API_BASE_URL}/users/staff/${encodeURIComponent(staffId)}`,
+    {
+      method: "PATCH",
+      headers: getAuthHeaders(accessToken),
+      body: JSON.stringify(payload),
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(await parseApiError(response, "Failed to update staff."));
+  }
+
+  const body = (await response.json()) as unknown;
+  const mapped = mapStaff((body as { data?: unknown })?.data ?? body);
+  if (!mapped) {
+    throw new Error("Unexpected update staff response.");
+  }
+
+  return mapped;
+};
+
+export const deleteStaff = async (
+  accessToken: string,
+  staffId: string
+): Promise<ApiActionResult> => {
+  const response = await makeRequest(
+    `${AUTH_API_BASE_URL}/users/staff/${encodeURIComponent(staffId)}`,
+    {
+      method: "DELETE",
+      headers: getAuthHeaders(accessToken),
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(await parseApiError(response, "Failed to delete staff."));
+  }
+
+  const contentType = response.headers.get("Content-Type") || "";
+  if (contentType.includes("application/json")) {
+    const body = (await response.json()) as Record<string, unknown>;
+    return {
+      success: getBoolean(body, ["success"], true),
+      message: getString(body, ["message", "detail"], "Staff deleted successfully."),
+    };
+  }
+
+  return {
+    success: true,
+    message: "Staff deleted successfully.",
+  };
+};
+
+export const listSuppliers = async (accessToken: string): Promise<Supplier[]> => {
+  let response = await makeRequest(`${AUTH_API_BASE_URL}/suppliers`, {
+    method: "GET",
+    headers: getAuthHeaders(accessToken),
+  });
+
+  // Backward compatibility for APIs that still expose singular route.
+  if (!response.ok && (response.status === 404 || response.status === 405)) {
+    response = await makeRequest(`${AUTH_API_BASE_URL}/supplier/`, {
+      method: "GET",
+      headers: getAuthHeaders(accessToken),
+    });
+  }
+
+  if (!response.ok) {
+    throw new Error(await parseApiError(response, "Failed to load suppliers."));
+  }
+
+  const body = (await response.json()) as unknown;
+  return getListData(body)
+    .map(mapSupplier)
+    .filter((item): item is Supplier => item !== null);
+};
+
+export const createSupplier = async (
+  accessToken: string,
+  payload: CreateSupplierPayload
+): Promise<Supplier> => {
+  let response = await makeRequest(`${AUTH_API_BASE_URL}/suppliers`, {
+    method: "POST",
+    headers: getAuthHeaders(accessToken),
+    body: JSON.stringify(payload),
+  });
+
+  // Backward compatibility for APIs that still expose singular route.
+  if (!response.ok && (response.status === 404 || response.status === 405)) {
+    response = await makeRequest(`${AUTH_API_BASE_URL}/supplier/`, {
+      method: "POST",
+      headers: getAuthHeaders(accessToken),
+      body: JSON.stringify(payload),
+    });
+  }
+
+  if (!response.ok) {
+    throw new Error(await parseApiError(response, "Failed to create supplier."));
+  }
+
+  const body = (await response.json()) as unknown;
+  const mapped = mapSupplier((body as { data?: unknown })?.data ?? body);
+  if (!mapped) {
+    throw new Error("Unexpected create supplier response.");
+  }
+
+  return mapped;
 };

@@ -8,6 +8,7 @@ import {
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
+import toast from "react-hot-toast";
 import { Dropdown } from "../ui/dropdown/Dropdown";
 import { DropdownItem } from "../ui/dropdown/DropdownItem";
 
@@ -68,6 +69,7 @@ function toggleDropdown(e: React.MouseEvent<HTMLButtonElement, MouseEvent>) {
             height={44}
             src={avatarSrc}
             alt={`${userName} profile`}
+            loading="eager"
             onError={() => {
               if (avatarSrc !== DEFAULT_AVATAR) {
                 setAvatarSrc(DEFAULT_AVATAR);
@@ -197,7 +199,9 @@ function toggleDropdown(e: React.MouseEvent<HTMLButtonElement, MouseEvent>) {
             const session = getAuthSession();
             try {
               await logout(session?.refreshToken);
+              toast.success("Signed out successfully.");
             } catch {
+              toast.error("Sign-out request failed. Clearing local session.");
               // Clear local session regardless of server logout response.
             } finally {
               clearAuthSession();

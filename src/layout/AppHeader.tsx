@@ -90,6 +90,7 @@ const AppHeader: React.FC = () => {
                 height={28}
                 src="/images/logo/logo-icon.svg"
                 alt="Snapserve"
+                loading="eager"
               />
               <span className="text-lg font-semibold text-gray-900 dark:text-white">
                 Snapserve
