@@ -7,11 +7,14 @@ import { usePathname } from "next/navigation";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useSidebar } from "../context/SidebarContext";
 import {
-  // BoxCubeIcon,
-  // CalenderIcon,
-  ChevronDownIcon,
-  GridIcon,
-  HorizontaLDots,
+    // BoxCubeIcon,
+    // CalenderIcon,
+    BoxCubeIcon,
+    ChevronDownIcon,
+  GroupIcon,
+    GridIcon,
+    HorizontaLDots,
+  UserIcon,
 } from "../icons/index";
 // import SidebarWidget from "./SidebarWidget";
 
@@ -27,15 +30,35 @@ const navItems: NavItem[] = [
   {
     icon: <GridIcon />,
     name: "Dashboard",
-    path: "/",
-    // subItems: [
-    //   { name: "Superadmin Dashboard", path: "/superadmin-dashboard", pro: false },
-    //   { name: "Admin Dashboard", path: "/admin-dashboard", pro: false },
-    //   { name: "Cashier Dashboard", path: "/cashier-dashboard", pro: false },
-    // ],
+    path: "/superadmin-dashboard",
+    roles: ["superadmin"],
   },
   {
     icon: <GridIcon />,
+    name: "Dashboard",
+    path: "/admin-dashboard",
+    roles: ["admin"],
+  },
+  {
+    icon: <UserIcon />,
+    name: "Manage Staffs",
+    path: "/manage-staff",
+    roles: ["admin"],
+  },
+  {
+    icon: <GroupIcon />,
+    name: "Manage Suppliers",
+    path: "/manage-suppliers",
+    roles: ["admin"],
+  },
+  {
+    icon: <GridIcon />,
+    name: "Dashboard",
+    path: "/cashier-dashboard",
+    roles: ["cashier"],
+  },
+  {
+    icon: <BoxCubeIcon />,
     name: "Manage Restaurent",
     path: "/manage-restaurent",
     roles: ["superadmin"],
@@ -104,7 +127,13 @@ const navItems: NavItem[] = [
 const AppSidebar: React.FC = () => {
   const { isExpanded, isMobileOpen, isHovered, setIsHovered } = useSidebar();
   const pathname = usePathname();
-  const userRole = getAuthSession()?.user?.role;
+  const [userRole, setUserRole] = useState<UserRole | null>(null);
+
+  useEffect(() => {
+    const sessionRole = getAuthSession()?.user?.role ?? null;
+    setUserRole(sessionRole);
+  }, []);
+
   const visibleNavItems = navItems.filter(
     (item) => !item.roles || (!!userRole && item.roles.includes(userRole))
   );
@@ -327,6 +356,7 @@ const AppSidebar: React.FC = () => {
                 alt="Snapserve"
                 width={32}
                 height={32}
+                loading="eager"
               />
               <span className="text-xl font-semibold text-gray-900 dark:text-white">
                 Snapserve
@@ -338,6 +368,7 @@ const AppSidebar: React.FC = () => {
               alt="Snapserve"
               width={32}
               height={32}
+              loading="eager"
             />
           )}
         </Link>
@@ -347,7 +378,7 @@ const AppSidebar: React.FC = () => {
           <div className="flex flex-col gap-4">
             <div>
               <h2
-                className={`mb-4 text-xs uppercase flex leading-[20px] text-gray-400 ${
+                className={`mb-4 text-xs uppercase flex leading-5 text-gray-400 ${
                   !isExpanded && !isHovered
                     ? "lg:justify-center"
                     : "justify-start"

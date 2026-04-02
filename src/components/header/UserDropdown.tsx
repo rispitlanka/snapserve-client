@@ -68,6 +68,7 @@ function toggleDropdown(e: React.MouseEvent<HTMLButtonElement, MouseEvent>) {
             height={44}
             src={avatarSrc}
             alt={`${userName} profile`}
+            loading="eager"
             onError={() => {
               if (avatarSrc !== DEFAULT_AVATAR) {
                 setAvatarSrc(DEFAULT_AVATAR);

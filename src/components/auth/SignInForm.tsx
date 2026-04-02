@@ -152,7 +152,7 @@ export default function SignInForm() {
                   </div>
                 ) : null}
 
-                <Button className="w-full" size="sm" disabled={isSubmitting}>
+                <Button className="w-full" size="sm" type="submit" disabled={isSubmitting}>
                   {isSubmitting ? "Signing in..." : "Sign in"}
                 </Button>
               </div>

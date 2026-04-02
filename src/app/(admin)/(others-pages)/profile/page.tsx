@@ -1,3 +1,4 @@
+import ChangePasswordCard from "@/components/user-profile/ChangePasswordCard";
 import UserAddressCard from "@/components/user-profile/UserAddressCard";
 import UserInfoCard from "@/components/user-profile/UserInfoCard";
 import UserMetaCard from "@/components/user-profile/UserMetaCard";
@@ -20,6 +21,7 @@ export default function Profile() {
           <UserMetaCard />
           <UserInfoCard />
           <UserAddressCard />
+          <ChangePasswordCard />
         </div>
       </div>
     </div>

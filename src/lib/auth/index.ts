@@ -1,12 +1,40 @@
 export {
-    createRestaurant, createRestaurantAdmin, listRegisters, listRestaurantAdmins, listRestaurants, login,
+    changePassword,
+    createRestaurant,
+    createRestaurantAdmin,
+    createStaff,
+    createSupplier,
+    deleteStaff,
+    listRegisters,
+    listRestaurantAdmins,
+    listRestaurants,
+    listStaff,
+    listSuppliers,
+    login,
     logout,
     parseAuthSession,
     refreshSession,
-    selectRegister
+    selectRegister,
+    updateStaff
 } from "./api";
 export { AUTH_API_BASE_URL, AUTH_STORAGE_KEY, ROLE_DASHBOARD_ROUTE } from "./constants";
 export { clearAuthSession, getAuthSession, saveAuthSession } from "./session";
 export { REGISTER_OPTIONS } from "./types";
-export type { AuthSession, AuthUser, Register, RegisterOption, Restaurant, UserRole } from "./types";
+export type {
+    ApiActionResult,
+    AuthSession,
+    AuthUser,
+    ChangePasswordPayload,
+    ChangePasswordResult,
+    CreateStaffPayload,
+    CreateSupplierPayload,
+    DashboardSummary,
+    Register,
+    RegisterOption,
+    Restaurant,
+    Staff,
+    Supplier,
+    UpdateStaffPayload,
+    UserRole
+} from "./types";
 
