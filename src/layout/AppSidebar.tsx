@@ -65,6 +65,12 @@ const navItems: NavItem[] = [
     roles: ["cashier"],
   },
   {
+    icon: <UserIcon />,
+    name: "User Profile",
+    path: "/profile",
+    roles: ["superadmin", "admin", "cashier"],
+  },
+  {
     icon: <BoxCubeIcon />,
     name: "Manage Restaurent",
     path: "/manage-restaurent",

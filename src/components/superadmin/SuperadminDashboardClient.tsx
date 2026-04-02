@@ -9,6 +9,7 @@ import {
   listRestaurants,
 } from "@/lib/auth";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import toast from "react-hot-toast";
 
 type Restaurant = {
   id: string;
@@ -148,10 +149,13 @@ export default function SuperadminDashboardClient() {
         name: name.trim(),
         isActive,
       });
+      toast.success("Restaurant created successfully.");
       closeRestaurantModal();
       await loadRestaurants();
-    } catch {
-      setError("Failed to create restaurant.");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to create restaurant.";
+      setError(message);
+      toast.error(message);
     }
   };
 
@@ -203,8 +207,12 @@ export default function SuperadminDashboardClient() {
       await loadRestaurantAdmins();
       closeAdminModal();
       setAdminSuccess("Restaurant admin created successfully.");
-    } catch {
-      setAdminError("Failed to create restaurant admin.");
+      toast.success("Restaurant admin created successfully.");
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Failed to create restaurant admin.";
+      setAdminError(message);
+      toast.error(message);
     }
   };
 

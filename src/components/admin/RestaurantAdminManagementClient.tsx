@@ -13,6 +13,7 @@ import {
 } from "@/lib/auth";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import toast from "react-hot-toast";
 import Input from "../form/input/InputField";
 import Label from "../form/Label";
 import Button from "../ui/button/Button";
@@ -252,24 +253,24 @@ export default function RestaurantAdminManagementClient({
           role: staffForm.role,
         });
         setStaffSuccess("Staff member created successfully.");
+        toast.success("Staff member created successfully.");
       } else if (editingStaffId) {
         const payload: UpdateStaffPayload = {
           name: trimmedName,
           role: staffForm.role,
         };
 
-        if (trimmedPassword) {
-          payload.password = trimmedPassword;
-        }
-
         await updateStaff(session.accessToken, editingStaffId, payload);
         setStaffSuccess("Staff member updated successfully.");
+        toast.success("Staff member updated successfully.");
       }
 
       closeStaffModal();
       await refreshStaff();
     } catch (error) {
-      setStaffError(error instanceof Error ? error.message : "Failed to save staff member.");
+      const message = error instanceof Error ? error.message : "Failed to save staff member.";
+      setStaffError(message);
+      toast.error(message);
     } finally {
       setIsSavingStaff(false);
     }
@@ -289,10 +290,13 @@ export default function RestaurantAdminManagementClient({
     try {
       await deleteStaff(session.accessToken, deletingStaff.id);
       setStaffSuccess("Staff member deleted successfully.");
+      toast.success("Staff member deleted successfully.");
       closeDeleteModal();
       await refreshStaff();
     } catch (error) {
-      setStaffError(error instanceof Error ? error.message : "Failed to delete staff member.");
+      const message = error instanceof Error ? error.message : "Failed to delete staff member.";
+      setStaffError(message);
+      toast.error(message);
     } finally {
       setIsDeletingStaff(false);
     }
@@ -336,10 +340,13 @@ export default function RestaurantAdminManagementClient({
         description: trimmedDescription,
       });
       setSupplierSuccess("Supplier created successfully.");
+      toast.success("Supplier created successfully.");
       closeSupplierModal();
       await refreshSuppliers();
     } catch (error) {
-      setSupplierError(error instanceof Error ? error.message : "Failed to create supplier.");
+      const message = error instanceof Error ? error.message : "Failed to create supplier.";
+      setSupplierError(message);
+      toast.error(message);
     } finally {
       setIsSavingSupplier(false);
     }
@@ -607,13 +614,15 @@ export default function RestaurantAdminManagementClient({
             </div>
 
             <div>
-              <Label>{staffMode === "create" ? "Password" : "New Password (optional)"}</Label>
-              <Input
-                type="password"
-                value={staffForm.password}
-                onChange={(event) => setStaffForm((prev) => ({ ...prev, password: event.target.value }))}
-                placeholder={staffMode === "create" ? "Minimum 6 characters" : "Leave blank to keep current password"}
-              />
+              <Label>Password</Label>
+              {staffMode === "create" ? (
+                <Input
+                  type="password"
+                  value={staffForm.password}
+                  onChange={(event) => setStaffForm((prev) => ({ ...prev, password: event.target.value }))}
+                  placeholder="Minimum 6 characters"
+                />
+              ) : null}
             </div>
 
             <div>

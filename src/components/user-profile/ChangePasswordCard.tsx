@@ -3,6 +3,7 @@
 import { useModal } from "@/hooks/useModal";
 import { changePassword, getAuthSession } from "@/lib/auth";
 import { useState } from "react";
+import toast from "react-hot-toast";
 import Input from "../form/input/InputField";
 import Label from "../form/Label";
 import Button from "../ui/button/Button";
@@ -68,12 +69,15 @@ export default function ChangePasswordCard() {
         newPassword: newPassword.trim(),
       });
 
-      setSuccess(response.message || "Password changed successfully.");
+      const message = response.message || "Password changed successfully.";
+      setSuccess(message);
+      toast.success(message);
       handleClose();
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to change password."
-      );
+      const message =
+        err instanceof Error ? err.message : "Failed to change password.";
+      setError(message);
+      toast.error(message);
     } finally {
       setIsSaving(false);
     }

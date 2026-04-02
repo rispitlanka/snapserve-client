@@ -29,6 +29,7 @@ import type {
 } from "@/lib/inventory";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import toast from "react-hot-toast";
 
 type InventoryTab = "categories" | "subCategories" | "brands" | "items";
 
@@ -327,10 +328,13 @@ export default function InventoryManagementClient() {
     try {
       await createInventoryCategory(session.accessToken, { name: trimmedName });
       setCategorySuccess("Category created successfully.");
+      toast.success("Category created successfully.");
       closeCategoryModal();
       await reloadInventory(session.accessToken);
     } catch (err) {
-      setCategoryError(err instanceof Error ? err.message : "Failed to create category.");
+      const message = err instanceof Error ? err.message : "Failed to create category.";
+      setCategoryError(message);
+      toast.error(message);
     } finally {
       setIsCreatingCategory(false);
     }
@@ -365,10 +369,13 @@ export default function InventoryManagementClient() {
         categoryId: subCategoryForm.categoryId,
       });
       setSubCategorySuccess("Sub-category created successfully.");
+      toast.success("Sub-category created successfully.");
       closeSubCategoryModal();
       await reloadInventory(session.accessToken);
     } catch (err) {
-      setSubCategoryError(err instanceof Error ? err.message : "Failed to create sub-category.");
+      const message = err instanceof Error ? err.message : "Failed to create sub-category.";
+      setSubCategoryError(message);
+      toast.error(message);
     } finally {
       setIsCreatingSubCategory(false);
     }
@@ -395,10 +402,13 @@ export default function InventoryManagementClient() {
     try {
       await createInventoryBrand(session.accessToken, { name: trimmedName });
       setBrandSuccess("Brand created successfully.");
+      toast.success("Brand created successfully.");
       closeBrandModal();
       await reloadInventory(session.accessToken);
     } catch (err) {
-      setBrandError(err instanceof Error ? err.message : "Failed to create brand.");
+      const message = err instanceof Error ? err.message : "Failed to create brand.";
+      setBrandError(message);
+      toast.error(message);
     } finally {
       setIsCreatingBrand(false);
     }
@@ -461,12 +471,16 @@ export default function InventoryManagementClient() {
       });
 
       setItemCreateSuccess("Inventory item created successfully.");
+      toast.success("Inventory item created successfully.");
       closeItemModal();
       await reloadInventory(session.accessToken);
       setSelectedItemId(createdItem.id);
       await reloadSelectedItem(session.accessToken, createdItem.id);
     } catch (err) {
-      setItemCreateError(err instanceof Error ? err.message : "Failed to create inventory item.");
+      const message =
+        err instanceof Error ? err.message : "Failed to create inventory item.";
+      setItemCreateError(message);
+      toast.error(message);
     } finally {
       setIsCreatingItem(false);
     }
