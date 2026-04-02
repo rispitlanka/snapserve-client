@@ -25,7 +25,7 @@ export default function MetricCard({
 
       <div className="mt-5">
         <span className="text-sm text-gray-500 dark:text-gray-400">{title}</span>
-        <div className="mt-2 min-h-[2.5rem]">
+        <div className="mt-2 min-h-10">
           {isLoading ? (
             <div className="h-8 w-24 animate-pulse rounded-md bg-gray-100 dark:bg-gray-800" />
           ) : (

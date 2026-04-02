@@ -15,6 +15,7 @@ import {
     GridIcon,
     HorizontaLDots,
   UserIcon,
+  BoxIconLine,
 } from "../icons/index";
 // import SidebarWidget from "./SidebarWidget";
 
@@ -49,6 +50,12 @@ const navItems: NavItem[] = [
     icon: <GroupIcon />,
     name: "Manage Suppliers",
     path: "/manage-suppliers",
+    roles: ["admin"],
+  },
+  {
+    icon: <BoxIconLine />,
+    name: "Manage Inventory",
+    path: "/manage-inventory",
     roles: ["admin"],
   },
   {
