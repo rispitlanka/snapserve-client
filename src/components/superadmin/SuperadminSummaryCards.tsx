@@ -1,7 +1,7 @@
 "use client";
 
 import MetricCard from "@/components/common/MetricCard";
-import { ArrowUpIcon, BoxCubeIcon, DollarLineIcon, GroupIcon, PieChartIcon, UserIcon } from "@/icons";
+import { ArrowUpIcon, BoxCubeIcon, DollarLineIcon, GroupIcon, PieChartIcon } from "@/icons";
 import type { DashboardSummary } from "@/lib/auth";
 import { getAuthSession, listRestaurantAdmins, listRestaurants, ROLE_DASHBOARD_ROUTE } from "@/lib/auth";
 import { useRouter } from "next/navigation";
@@ -152,22 +152,6 @@ export default function SuperadminSummaryCards() {
           description="Recently added restaurants"
           icon={<BoxCubeIcon className="size-6 text-warning-600 dark:text-warning-400" />}
           accentClassName="bg-warning-50 dark:bg-warning-500/10"
-          isLoading={isLoading}
-        />
-        <MetricCard
-          title="Total Owners"
-          value={summary.totalOwners.toLocaleString()}
-          description="Restaurant owners / admins"
-          icon={<UserIcon className="size-6 text-success-600 dark:text-success-400" />}
-          accentClassName="bg-success-50 dark:bg-success-500/10"
-          isLoading={isLoading}
-        />
-        <MetricCard
-          title="New Restaurants"
-          value={summary.newRestaurants.toLocaleString()}
-          description="Created within the last 30 days"
-          icon={<PieChartIcon className="size-6 text-brand-600 dark:text-brand-400" />}
-          accentClassName="bg-brand-50 dark:bg-brand-500/10"
           isLoading={isLoading}
         />
         <MetricCard

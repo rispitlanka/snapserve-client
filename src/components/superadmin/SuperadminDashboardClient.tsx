@@ -47,6 +47,7 @@ export default function SuperadminDashboardClient({
   const [adminError, setAdminError] = useState("");
   const [adminSuccess, setAdminSuccess] = useState("");
   const [adminName, setAdminName] = useState("");
+  const [businessId, setBusinessId] = useState("");
   const [adminPassword, setAdminPassword] = useState("");
   const [adminSearch, setAdminSearch] = useState("");
   const [showAddAdminForm, setShowAddAdminForm] = useState(false);
@@ -80,6 +81,7 @@ export default function SuperadminDashboardClient({
 
   const closeAdminModal = () => {
     setAdminName("");
+    setBusinessId("");
     setAdminPassword("");
     setSelectedRestaurantId("");
     setAdminError("");
@@ -172,12 +174,18 @@ export default function SuperadminDashboardClient({
   const handleAddRestaurantAdmin = async () => {
     const trimmedAdminName = adminName.trim();
     const trimmedRestaurantId = selectedRestaurantId.trim();
+    const trimmedBusinessId = businessId.trim();
 
     setAdminError("");
     setAdminSuccess("");
 
     if (!trimmedRestaurantId) {
       setAdminError("Select a restaurant.");
+      return;
+    }
+
+    if (!trimmedBusinessId) {
+      setAdminError("Business ID is required.");
       return;
     }
 
@@ -210,6 +218,7 @@ export default function SuperadminDashboardClient({
 
       await createRestaurantAdmin(session.accessToken, {
         restaurantId: trimmedRestaurantId,
+        businessId: trimmedBusinessId,
         name: trimmedAdminName,
         password: adminPassword.trim(),
       });
@@ -561,7 +570,11 @@ export default function SuperadminDashboardClient({
             </label>
             <select
               value={selectedRestaurantId}
-              onChange={(e) => setSelectedRestaurantId(e.target.value)}
+              onChange={(e) => {
+                const nextRestaurantId = e.target.value;
+                setSelectedRestaurantId(nextRestaurantId);
+                setBusinessId((current) => current || nextRestaurantId);
+              }}
               className="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
             >
               <option value="">Select restaurant</option>
@@ -571,6 +584,19 @@ export default function SuperadminDashboardClient({
                 </option>
               ))}
             </select>
+          </div>
+
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Business ID <span className="text-error-500">*</span>
+            </label>
+            <input
+              type="text"
+              value={businessId}
+              onChange={(e) => setBusinessId(e.target.value)}
+              placeholder="Business ID"
+              className="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
+            />
           </div>
 
           <div>
@@ -610,7 +636,7 @@ export default function SuperadminDashboardClient({
             <button
               type="button"
               onClick={handleAddRestaurantAdmin}
-              disabled={!selectedRestaurantId.trim() || !adminName.trim() || !adminPassword.trim()}
+              disabled={!selectedRestaurantId.trim() || !businessId.trim() || !adminName.trim() || !adminPassword.trim()}
               className="inline-flex items-center justify-center rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50"
             >
               Save Restaurant Admin
