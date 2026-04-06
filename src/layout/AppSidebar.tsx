@@ -4,18 +4,27 @@ import { getAuthSession } from "@/lib/auth";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import { useSidebar } from "../context/SidebarContext";
 import {
-    // BoxCubeIcon,
-    // CalenderIcon,
-    BoxCubeIcon,
-    ChevronDownIcon,
-  GroupIcon,
-    GridIcon,
-    HorizontaLDots,
-  UserIcon,
+  // BoxCubeIcon,
+  // CalenderIcon,
+  BoxCubeIcon,
   BoxIconLine,
+  ChevronDownIcon,
+  DollarLineIcon,
+  GridIcon,
+  GroupIcon,
+  HorizontaLDots,
+  PieChartIcon,
+  UserIcon,
 } from "../icons/index";
 // import SidebarWidget from "./SidebarWidget";
 
@@ -28,12 +37,39 @@ type NavItem = {
 };
 
 const navItems: NavItem[] = [
+  // Super Admin Items
   {
     icon: <GridIcon />,
     name: "Dashboard",
     path: "/superadmin-dashboard",
     roles: ["superadmin"],
   },
+  {
+    icon: <BoxCubeIcon />,
+    name: "Restaurants",
+    path: "/manage-restaurent",
+    roles: ["superadmin"],
+  },
+  {
+    icon: <GroupIcon />,
+    name: "Owners",
+    path: "/manage-restaurant-admins",
+    roles: ["superadmin"],
+  },
+  {
+    icon: <PieChartIcon />,
+    name: "Reports",
+    path: "/reports",
+    roles: ["superadmin"],
+  },
+  {
+    icon: <DollarLineIcon />,
+    name: "Subscriptions",
+    path: "/subscriptions",
+    roles: ["superadmin"],
+  },
+  
+  // Admin Items
   {
     icon: <GridIcon />,
     name: "Dashboard",
@@ -55,26 +91,22 @@ const navItems: NavItem[] = [
   {
     icon: <BoxIconLine />,
     name: "Manage Inventory",
-    path: "/manage-inventory",
+    subItems: [
+      { name: "Overview", path: "/manage-inventory" },
+      { name: "Categories", path: "/manage-inventory-categories" },
+      { name: "Sub-categories", path: "/manage-inventory-sub-categories" },
+      { name: "Brands", path: "/manage-inventory-brands" },
+      { name: "Items", path: "/manage-inventory-items" },
+    ],
     roles: ["admin"],
   },
+  
+  // Cashier Items
   {
     icon: <GridIcon />,
     name: "Dashboard",
     path: "/cashier-dashboard",
     roles: ["cashier"],
-  },
-  {
-    icon: <UserIcon />,
-    name: "User Profile",
-    path: "/profile",
-    roles: ["superadmin", "admin", "cashier"],
-  },
-  {
-    icon: <BoxCubeIcon />,
-    name: "Manage Restaurent",
-    path: "/manage-restaurent",
-    roles: ["superadmin"],
   },
   // {
   //   icon: <CalenderIcon />,
@@ -140,29 +172,89 @@ const navItems: NavItem[] = [
 const AppSidebar: React.FC = () => {
   const { isExpanded, isMobileOpen, isHovered, setIsHovered } = useSidebar();
   const pathname = usePathname();
-  const [userRole, setUserRole] = useState<UserRole | null>(null);
 
-  useEffect(() => {
-    const sessionRole = getAuthSession()?.user?.role ?? null;
-    setUserRole(sessionRole);
+  const subscribeToSession = useCallback(() => {
+    return () => {
+      // No-op subscription. We only need a hydration-safe snapshot.
+    };
   }, []);
 
-  const visibleNavItems = navItems.filter(
-    (item) => !item.roles || (!!userRole && item.roles.includes(userRole))
+  const authUserSnapshot = useSyncExternalStore<string>(
+    subscribeToSession,
+    () => {
+      const user = getAuthSession()?.user;
+      return user ? `${user.role}::${user.name ?? ""}` : "";
+    },
+    () => ""
   );
+
+  const authUser = useMemo(() => {
+    if (!authUserSnapshot) return null;
+    const [rolePart, ...nameParts] = authUserSnapshot.split("::");
+    if (!rolePart) return null;
+    return {
+      role: rolePart as UserRole,
+      name: nameParts.join("::"),
+    };
+  }, [authUserSnapshot]);
+
+  const userRole = authUser?.role ?? null;
+
+  const visibleNavItems = useMemo(
+    () => navItems.filter((item) => !item.roles || (!!userRole && item.roles.includes(userRole))),
+    [userRole]
+  );
+
+  const showBottomProfileLink = Boolean(
+    userRole && ["superadmin", "admin", "cashier"].includes(userRole)
+  );
+
+  const profileLinkIsActive = pathname === "/profile";
+
+  const profileName = authUser?.name?.trim() || "User";
+  const profileRoleLabel =
+    authUser?.role === "superadmin"
+      ? "Super Admin"
+      : authUser?.role === "admin"
+      ? "Restaurant Admin"
+      : authUser?.role === "cashier"
+      ? "Cashier"
+      : "";
+
+  const profileInitials = profileName
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? "")
+    .join("") || "U";
 
   const renderMenuItems = (
     navItems: NavItem[],
     menuType: "main" | "others"
-  ) => (
+  ) => {
+    const firstPathIndex = navItems.reduce<Record<string, number>>((acc, item, idx) => {
+      if (item.path && acc[item.path] === undefined) {
+        acc[item.path] = idx;
+      }
+      return acc;
+    }, {});
+
+    return (
     <ul className="flex flex-col gap-4">
-      {navItems.map((nav, index) => (
+      {navItems.map((nav, index) => {
+        const isPrimaryRouteMatch =
+          Boolean(nav.path) && firstPathIndex[nav.path as string] === index;
+
+        const navIsActive = Boolean(nav.path) && isPrimaryRouteMatch && isActive(nav.path as string);
+
+        return (
         <li key={nav.name}>
           {nav.subItems ? (
             <button
               onClick={() => handleSubmenuToggle(index, menuType)}
               className={`menu-item group  ${
-                openSubmenu?.type === menuType && openSubmenu?.index === index
+                resolvedOpenSubmenu?.type === menuType &&
+                resolvedOpenSubmenu?.index === index
                   ? "menu-item-active"
                   : "menu-item-inactive"
               } cursor-pointer ${
@@ -173,7 +265,8 @@ const AppSidebar: React.FC = () => {
             >
               <span
                 className={` ${
-                  openSubmenu?.type === menuType && openSubmenu?.index === index
+                  resolvedOpenSubmenu?.type === menuType &&
+                  resolvedOpenSubmenu?.index === index
                     ? "menu-item-icon-active"
                     : "menu-item-icon-inactive"
                 }`}
@@ -186,8 +279,8 @@ const AppSidebar: React.FC = () => {
               {(isExpanded || isHovered || isMobileOpen) && (
                 <ChevronDownIcon
                   className={`ml-auto w-5 h-5 transition-transform duration-200  ${
-                    openSubmenu?.type === menuType &&
-                    openSubmenu?.index === index
+                    resolvedOpenSubmenu?.type === menuType &&
+                    resolvedOpenSubmenu?.index === index
                       ? "rotate-180 text-brand-500"
                       : ""
                   }`}
@@ -199,12 +292,12 @@ const AppSidebar: React.FC = () => {
               <Link
                 href={nav.path}
                 className={`menu-item group ${
-                  isActive(nav.path) ? "menu-item-active" : "menu-item-inactive"
+                  navIsActive ? "menu-item-active" : "menu-item-inactive"
                 }`}
               >
                 <span
                   className={`${
-                    isActive(nav.path)
+                    navIsActive
                       ? "menu-item-icon-active"
                       : "menu-item-icon-inactive"
                   }`}
@@ -225,12 +318,13 @@ const AppSidebar: React.FC = () => {
               className="overflow-hidden transition-all duration-300"
               style={{
                 height:
-                  openSubmenu?.type === menuType && openSubmenu?.index === index
+                  resolvedOpenSubmenu?.type === menuType &&
+                  resolvedOpenSubmenu?.index === index
                     ? `${subMenuHeight[`${menuType}-${index}`]}px`
                     : "0px",
               }}
             >
-              <ul className="mt-2 space-y-1 ml-9">
+              <ul className="mt-2 ml-6 space-y-1">
                 {nav.subItems.map((subItem) => (
                   <li key={subItem.name}>
                     <Link
@@ -273,9 +367,10 @@ const AppSidebar: React.FC = () => {
             </div>
           )}
         </li>
-      ))}
+      )})}
     </ul>
-  );
+    );
+  };
 
   const [openSubmenu, setOpenSubmenu] = useState<{
     type: "main" | "others";
@@ -287,38 +382,26 @@ const AppSidebar: React.FC = () => {
   const subMenuRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   // const isActive = (path: string) => path === pathname;
-   const isActive = useCallback((path: string) => path === pathname, [pathname]);
+  const isActive = useCallback((path: string) => path === pathname, [pathname]);
 
-  // useEffect(() => {
-  //   // Check if the current path matches any submenu item
-  //   let submenuMatched = false;
-  //   ["main", "others"].forEach((menuType) => {
-  //     const items = menuType === "main" ? navItems : [];
-  //     items.forEach((nav, index) => {
-  //       if (nav.subItems) {
-  //         nav.subItems.forEach((subItem) => {
-  //           if (isActive(subItem.path)) {
-  //             setOpenSubmenu({
-  //               type: menuType as "main" | "others",
-  //               index,
-  //             });
-  //             submenuMatched = true;
-  //           }
-  //         });
-  //       }
-  //     });
-  //   });
+  const activeSubmenu = useMemo(() => {
+    const index = visibleNavItems.findIndex(
+      (item) => item.subItems?.some((subItem) => subItem.path === pathname)
+    );
 
-  //   // If no submenu item matches, close the open submenu
-  //   if (!submenuMatched) {
-  //     setOpenSubmenu(null);
-  //   }
-  // }, [pathname,isActive]);
+    if (index === -1) {
+      return null;
+    }
+
+    return { type: "main" as const, index };
+  }, [pathname, visibleNavItems]);
+
+  const resolvedOpenSubmenu = openSubmenu ?? activeSubmenu;
 
   useEffect(() => {
-    // Set the height of the submenu items when the submenu is opened
-    if (openSubmenu !== null) {
-      const key = `${openSubmenu.type}-${openSubmenu.index}`;
+    // Measure submenu height for both explicitly opened menus and auto-opened active route menus.
+    if (resolvedOpenSubmenu !== null) {
+      const key = `${resolvedOpenSubmenu.type}-${resolvedOpenSubmenu.index}`;
       if (subMenuRefs.current[key]) {
         setSubMenuHeight((prevHeights) => ({
           ...prevHeights,
@@ -326,7 +409,7 @@ const AppSidebar: React.FC = () => {
         }));
       }
     }
-  }, [openSubmenu]);
+  }, [resolvedOpenSubmenu]);
 
   const handleSubmenuToggle = (index: number, menuType: "main" | "others") => {
     setOpenSubmenu((prevOpenSubmenu) => {
@@ -386,7 +469,7 @@ const AppSidebar: React.FC = () => {
           )}
         </Link>
       </div>
-      <div className="flex flex-col overflow-y-auto duration-300 ease-linear no-scrollbar">
+      <div className="flex h-full flex-col overflow-y-auto duration-300 ease-linear no-scrollbar">
         <nav className="mb-6">
           <div className="flex flex-col gap-4">
             <div>
@@ -424,6 +507,60 @@ const AppSidebar: React.FC = () => {
             </div> */}
           </div>
         </nav>
+        {showBottomProfileLink ? (
+          <div className="mt-auto pb-6">
+            {isExpanded || isHovered || isMobileOpen ? (
+              <Link
+                href="/profile"
+                className={`group block rounded-2xl border p-3 transition-all ${
+                  profileLinkIsActive
+                    ? "border-brand-200 bg-brand-50/70 dark:border-brand-800 dark:bg-brand-500/10"
+                    : "border-gray-200 bg-gray-50 hover:border-gray-300 hover:bg-white dark:border-gray-800 dark:bg-white/3 dark:hover:border-gray-700 dark:hover:bg-gray-800/60"
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-500/10 text-sm font-semibold text-brand-700 dark:bg-brand-500/20 dark:text-brand-300">
+                    {profileInitials}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-gray-800 dark:text-white/90">
+                      {profileName}
+                    </p>
+                    <p className="truncate text-xs text-gray-500 dark:text-gray-400">
+                      {profileRoleLabel}
+                    </p>
+                  </div>
+                </div>
+                <div className="mt-3 flex items-center justify-between rounded-xl bg-white/80 px-3 py-2 text-xs font-medium text-gray-600 dark:bg-gray-900/60 dark:text-gray-300">
+                  <span>User Profile</span>
+                  <span
+                    className={`transition-transform ${
+                      profileLinkIsActive ? "text-brand-600 dark:text-brand-400" : ""
+                    } group-hover:translate-x-0.5`}
+                  >
+                    →
+                  </span>
+                </div>
+              </Link>
+            ) : (
+              <Link
+                href="/profile"
+                className={`menu-item group justify-center ${
+                  profileLinkIsActive ? "menu-item-active" : "menu-item-inactive"
+                }`}
+                aria-label="User Profile"
+              >
+                <span
+                  className={`${
+                    profileLinkIsActive ? "menu-item-icon-active" : "menu-item-icon-inactive"
+                  }`}
+                >
+                  <UserIcon />
+                </span>
+              </Link>
+            )}
+          </div>
+        ) : null}
         {/* {isExpanded || isHovered || isMobileOpen ? <SidebarWidget /> : null} */}
       </div>
     </aside>

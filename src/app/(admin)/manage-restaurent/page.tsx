@@ -2,10 +2,10 @@ import SuperadminDashboardClient from "@/components/superadmin/SuperadminDashboa
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Manage Restaurent",
-  description: "Manage restaurent dashboard view",
+  title: "Manage Restaurants",
+  description: "Manage restaurants dashboard view",
 };
 
 export default function ManageRestaurentPage() {
-  return <SuperadminDashboardClient />;
+  return <SuperadminDashboardClient defaultActiveTab="restaurants" showTabSwitcher={false} />;
 }

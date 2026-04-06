@@ -26,8 +26,18 @@ type CreatedAdmin = {
 
 type ManagementTab = "restaurants" | "admins";
 
-export default function SuperadminDashboardClient() {
-  const [activeTab, setActiveTab] = useState<ManagementTab>("restaurants");
+type SuperadminDashboardClientProps = {
+  defaultActiveTab?: ManagementTab;
+  showTabSwitcher?: boolean;
+  pageType?: "owners" | "admins";
+};
+
+export default function SuperadminDashboardClient({
+  defaultActiveTab = "restaurants",
+  showTabSwitcher = true,
+  pageType = "admins",
+}: SuperadminDashboardClientProps) {
+  const [activeTab, setActiveTab] = useState<ManagementTab>(defaultActiveTab);
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [name, setName] = useState("");
   const [isActive, setIsActive] = useState(true);
@@ -37,6 +47,7 @@ export default function SuperadminDashboardClient() {
   const [adminError, setAdminError] = useState("");
   const [adminSuccess, setAdminSuccess] = useState("");
   const [adminName, setAdminName] = useState("");
+  const [businessId, setBusinessId] = useState("");
   const [adminPassword, setAdminPassword] = useState("");
   const [adminSearch, setAdminSearch] = useState("");
   const [showAddAdminForm, setShowAddAdminForm] = useState(false);
@@ -70,6 +81,7 @@ export default function SuperadminDashboardClient() {
 
   const closeAdminModal = () => {
     setAdminName("");
+    setBusinessId("");
     setAdminPassword("");
     setSelectedRestaurantId("");
     setAdminError("");
@@ -162,12 +174,18 @@ export default function SuperadminDashboardClient() {
   const handleAddRestaurantAdmin = async () => {
     const trimmedAdminName = adminName.trim();
     const trimmedRestaurantId = selectedRestaurantId.trim();
+    const trimmedBusinessId = businessId.trim();
 
     setAdminError("");
     setAdminSuccess("");
 
     if (!trimmedRestaurantId) {
       setAdminError("Select a restaurant.");
+      return;
+    }
+
+    if (!trimmedBusinessId) {
+      setAdminError("Business ID is required.");
       return;
     }
 
@@ -200,6 +218,7 @@ export default function SuperadminDashboardClient() {
 
       await createRestaurantAdmin(session.accessToken, {
         restaurantId: trimmedRestaurantId,
+        businessId: trimmedBusinessId,
         name: trimmedAdminName,
         password: adminPassword.trim(),
       });
@@ -247,45 +266,48 @@ export default function SuperadminDashboardClient() {
     });
   }, [createdAdmins, adminSearch, restaurants]);
 
+  const pageTitle = activeTab === "admins" ? "Manage Restaurent Admin" : "Manage Restaurent";
+
   return (
     <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/3">
-      <h1 className="text-2xl font-semibold text-gray-800 dark:text-white/90">Manage Restaurent</h1>
+      <h1 className="text-2xl font-semibold text-gray-800 dark:text-white/90">{pageTitle}</h1>
       {error ? <p className="mt-2 text-sm text-error-500">{error}</p> : null}
       {adminError ? <p className="mt-2 text-sm text-error-500">{adminError}</p> : null}
       {adminSuccess ? (
         <p className="mt-2 text-sm text-success-600 dark:text-success-400">{adminSuccess}</p>
       ) : null}
 
-      <div className="mt-6 inline-flex rounded-lg border border-gray-200 bg-gray-50 p-1 dark:border-gray-700 dark:bg-gray-900">
-        <button
-          type="button"
-          onClick={() => setActiveTab("restaurants")}
-          className={`rounded-md px-4 py-2 text-sm font-medium transition-colors ${
-            activeTab === "restaurants"
-              ? "bg-white text-gray-900 shadow-sm dark:bg-gray-800 dark:text-white"
-              : "text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
-          }`}
-        >
-          Manage Restaurants
-        </button>
-        <button
-          type="button"
-          onClick={() => setActiveTab("admins")}
-          className={`rounded-md px-4 py-2 text-sm font-medium transition-colors ${
-            activeTab === "admins"
-              ? "bg-white text-gray-900 shadow-sm dark:bg-gray-800 dark:text-white"
-              : "text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
-          }`}
-        >
-          Manage Restaurant Admins
-        </button>
-      </div>
+      {showTabSwitcher ? (
+        <div className="mt-6 inline-flex rounded-lg border border-gray-200 bg-gray-50 p-1 dark:border-gray-700 dark:bg-gray-900">
+          <button
+            type="button"
+            onClick={() => setActiveTab("restaurants")}
+            className={`rounded-md px-4 py-2 text-sm font-medium transition-colors ${
+              activeTab === "restaurants"
+                ? "bg-white text-gray-900 shadow-sm dark:bg-gray-800 dark:text-white"
+                : "text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
+            }`}
+          >
+            Manage Restaurants
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("admins")}
+            className={`rounded-md px-4 py-2 text-sm font-medium transition-colors ${
+              activeTab === "admins"
+                ? "bg-white text-gray-900 shadow-sm dark:bg-gray-800 dark:text-white"
+                : "text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
+            }`}
+          >
+            Manage Restaurant Admins
+          </button>
+        </div>
+      ) : null}
 
       {activeTab === "restaurants" ? (
         <section className="mt-6 space-y-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <h2 className="text-lg font-semibold text-gray-800 dark:text-white/90">
-              Manage Restaurants
             </h2>
             <button
               type="button"
@@ -382,15 +404,12 @@ export default function SuperadminDashboardClient() {
       {activeTab === "admins" ? (
         <section className="mt-6 space-y-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <h2 className="text-lg font-semibold text-gray-800 dark:text-white/90">
-              Manage Restaurant Admins
-            </h2>
             <button
               type="button"
               onClick={openAdminModal}
               className="inline-flex items-center justify-center rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600"
             >
-              Add Restaurant Admin
+              {pageType === "owners" ? "Add Owner" : "Add Restaurant Admin"}
             </button>
           </div>
 
@@ -551,7 +570,11 @@ export default function SuperadminDashboardClient() {
             </label>
             <select
               value={selectedRestaurantId}
-              onChange={(e) => setSelectedRestaurantId(e.target.value)}
+              onChange={(e) => {
+                const nextRestaurantId = e.target.value;
+                setSelectedRestaurantId(nextRestaurantId);
+                setBusinessId((current) => current || nextRestaurantId);
+              }}
               className="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
             >
               <option value="">Select restaurant</option>
@@ -561,6 +584,19 @@ export default function SuperadminDashboardClient() {
                 </option>
               ))}
             </select>
+          </div>
+
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Business ID <span className="text-error-500">*</span>
+            </label>
+            <input
+              type="text"
+              value={businessId}
+              onChange={(e) => setBusinessId(e.target.value)}
+              placeholder="Business ID"
+              className="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
+            />
           </div>
 
           <div>
@@ -600,7 +636,7 @@ export default function SuperadminDashboardClient() {
             <button
               type="button"
               onClick={handleAddRestaurantAdmin}
-              disabled={!selectedRestaurantId.trim() || !adminName.trim() || !adminPassword.trim()}
+              disabled={!selectedRestaurantId.trim() || !businessId.trim() || !adminName.trim() || !adminPassword.trim()}
               className="inline-flex items-center justify-center rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50"
             >
               Save Restaurant Admin

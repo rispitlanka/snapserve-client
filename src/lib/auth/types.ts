@@ -38,6 +38,12 @@ export type DashboardSummary = {
   totalRestaurants: number;
   totalRestaurantAdmins: number;
   activeRestaurants: number;
+  totalOwners: number;
+  newRestaurants: number;
+  monthlyRevenue: number;
+  activeSubscriptions: number;
+  expiredSubscriptions: number;
+  pendingSubscriptions: number;
 };
 
 export type ChangePasswordPayload = {
@@ -74,6 +80,7 @@ export type UpdateStaffPayload = {
   name?: string;
   password?: string;
   role?: "SUPER_ADMIN" | "RESTAURANT_ADMIN" | "CASHIER" | "WAITER";
+  isActive?: boolean;
 };
 
 export type Supplier = {

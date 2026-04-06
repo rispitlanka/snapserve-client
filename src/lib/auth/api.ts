@@ -1,16 +1,16 @@
 import { AUTH_API_BASE_URL } from "./constants";
 import type {
-  ApiActionResult,
-  AuthSession,
-  ChangePasswordPayload,
-  ChangePasswordResult,
-  CreateStaffPayload,
-  CreateSupplierPayload,
-  Register,
-  Staff,
-  Supplier,
-  UpdateStaffPayload,
-  UserRole,
+    ApiActionResult,
+    AuthSession,
+    ChangePasswordPayload,
+    ChangePasswordResult,
+    CreateStaffPayload,
+    CreateSupplierPayload,
+    Register,
+    Staff,
+    Supplier,
+    UpdateStaffPayload,
+    UserRole,
 } from "./types";
 
 const normalizeRole = (value: unknown): UserRole => {
@@ -473,7 +473,7 @@ export const createRestaurant = async (
 
 export const createRestaurantAdmin = async (
   accessToken: string,
-  payload: { restaurantId: string; name: string; password: string }
+  payload: { restaurantId: string; businessId?: string; name: string; password: string }
 ) => {
   const response = await makeRequest(`${AUTH_API_BASE_URL}/users/admins`, {
     method: "POST",
