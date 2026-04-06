@@ -8,30 +8,31 @@ import { Modal } from "@/components/ui/modal";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
 import { BoxCubeIcon, FolderIcon, GroupIcon, TableIcon } from "@/icons";
 import { getAuthSession, ROLE_DASHBOARD_ROUTE } from "@/lib/auth";
-import {
-  createInventoryBrand,
-  createInventoryCategory,
-  createInventoryItem,
-  createInventorySubCategory,
-  getInventoryItem,
-  getInventoryItemHistory,
-  listInventoryBrands,
-  listInventoryCategories,
-  listInventoryItems,
-  listInventorySubCategories,
-} from "@/lib/inventory";
 import type {
-  InventoryBrand,
-  InventoryCategory,
-  InventoryItem,
-  InventoryItemHistoryEntry,
-  InventorySubCategory,
+    InventoryBrand,
+    InventoryCategory,
+    InventoryItem,
+    InventoryItemHistoryEntry,
+    InventorySubCategory,
+} from "@/lib/inventory";
+import {
+    createInventoryBrand,
+    createInventoryCategory,
+    createInventoryItem,
+    createInventorySubCategory,
+    getInventoryItem,
+    getInventoryItemHistory,
+    listInventoryBrands,
+    listInventoryCategories,
+    listInventoryItems,
+    listInventorySubCategories,
 } from "@/lib/inventory";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 
 type InventoryTab = "categories" | "subCategories" | "brands" | "items";
+type InventorySection = "overview" | InventoryTab;
 
 type CategoryFormState = { name: string };
 type SubCategoryFormState = { name: string; categoryId: string };
@@ -44,13 +45,6 @@ type ItemFormState = {
   unit: string;
   expiryDate: string;
 };
-
-const tabs: Array<{ key: InventoryTab; label: string }> = [
-  { key: "categories", label: "Categories" },
-  { key: "subCategories", label: "Sub-categories" },
-  { key: "brands", label: "Brands" },
-  { key: "items", label: "Inventory Items" },
-];
 
 const emptyCategoryForm: CategoryFormState = { name: "" };
 const emptySubCategoryForm: SubCategoryFormState = { name: "", categoryId: "" };
@@ -70,10 +64,15 @@ const formatDate = (value: string) => {
   return date.toLocaleDateString();
 };
 
-export default function InventoryManagementClient() {
+type InventoryManagementClientProps = {
+  section?: InventorySection;
+};
+
+export default function InventoryManagementClient({
+  section = "overview",
+}: InventoryManagementClientProps) {
   const router = useRouter();
   const [sessionReady, setSessionReady] = useState(false);
-  const [activeTab, setActiveTab] = useState<InventoryTab>("categories");
   const [categories, setCategories] = useState<InventoryCategory[]>([]);
   const [subCategories, setSubCategories] = useState<InventorySubCategory[]>([]);
   const [brands, setBrands] = useState<InventoryBrand[]>([]);
@@ -499,7 +498,9 @@ export default function InventoryManagementClient() {
       <div>
         <h1 className="text-2xl font-semibold text-gray-800 dark:text-white/90">Manage Inventory</h1>
         <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-          Browse categories, sub-categories, brands, and inventory items in one place.
+          {section === "overview"
+            ? "Overview of categories, sub-categories, brands, and inventory items."
+            : "Manage inventory data for this restaurant section."}
         </p>
       </div>
 
@@ -513,6 +514,7 @@ export default function InventoryManagementClient() {
           icon={<FolderIcon className="size-6 text-brand-600 dark:text-brand-400" />}
           accentClassName="bg-brand-50 dark:bg-brand-500/10"
           isLoading={isLoading}
+          href="/manage-inventory-categories"
         />
         <MetricCard
           title="Sub-categories"
@@ -521,6 +523,7 @@ export default function InventoryManagementClient() {
           icon={<GroupIcon className="size-6 text-success-600 dark:text-success-400" />}
           accentClassName="bg-success-50 dark:bg-success-500/10"
           isLoading={isLoading}
+          href="/manage-inventory-sub-categories"
         />
         <MetricCard
           title="Brands"
@@ -529,6 +532,7 @@ export default function InventoryManagementClient() {
           icon={<BoxCubeIcon className="size-6 text-warning-600 dark:text-warning-400" />}
           accentClassName="bg-warning-50 dark:bg-warning-500/10"
           isLoading={isLoading}
+          href="/manage-inventory-brands"
         />
         <MetricCard
           title="Items"
@@ -537,27 +541,11 @@ export default function InventoryManagementClient() {
           icon={<TableIcon className="size-6 text-indigo-600 dark:text-indigo-400" />}
           accentClassName="bg-indigo-50 dark:bg-indigo-500/10"
           isLoading={isLoading}
+          href="/manage-inventory-items"
         />
       </div>
 
-      <div className="inline-flex flex-wrap gap-2 rounded-xl border border-gray-200 bg-gray-50 p-1 dark:border-gray-700 dark:bg-gray-900">
-        {tabs.map((tab) => (
-          <button
-            key={tab.key}
-            type="button"
-            onClick={() => setActiveTab(tab.key)}
-            className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
-              activeTab === tab.key
-                ? "bg-white text-gray-900 shadow-sm dark:bg-gray-800 dark:text-white"
-                : "text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
-
-      {activeTab === "categories" ? (
+      {section === "categories" ? (
         <div className="space-y-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
@@ -600,7 +588,7 @@ export default function InventoryManagementClient() {
         </div>
       ) : null}
 
-      {activeTab === "subCategories" ? (
+      {section === "subCategories" ? (
         <div className="space-y-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
@@ -645,7 +633,7 @@ export default function InventoryManagementClient() {
         </div>
       ) : null}
 
-      {activeTab === "brands" ? (
+      {section === "brands" ? (
         <div className="space-y-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
@@ -688,7 +676,7 @@ export default function InventoryManagementClient() {
         </div>
       ) : null}
 
-      {activeTab === "items" ? (
+      {section === "items" ? (
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.5fr_1fr]">
           <div className="space-y-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -958,13 +946,16 @@ export default function InventoryManagementClient() {
 
               <div>
                 <Label htmlFor="item-unit">Unit</Label>
-                <Input
+                <select
                   id="item-unit"
-                  type="text"
                   value={itemForm.unit}
                   onChange={(event) => setItemForm((current) => ({ ...current, unit: event.target.value }))}
-                  placeholder="PCS"
-                />
+                  className="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+                >
+                  <option value="KG">KG</option>
+                  <option value="L">L</option>
+                  <option value="PCS">PCS</option>
+                </select>
               </div>
             </div>
 

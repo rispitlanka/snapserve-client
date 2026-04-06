@@ -42,7 +42,4 @@ next-env.d.ts
 # production env is tracked for CI/CD but not secrets
 .env
 
-devdoc.md
-devdoc.json
-plan.md
-inventory-plan.md
+docs/

@@ -29,13 +29,11 @@ type ManagementTab = "restaurants" | "admins";
 type SuperadminDashboardClientProps = {
   defaultActiveTab?: ManagementTab;
   showTabSwitcher?: boolean;
-  pageType?: "restaurants" | "owners";
 };
 
 export default function SuperadminDashboardClient({
   defaultActiveTab = "restaurants",
   showTabSwitcher = true,
-  pageType = "restaurants",
 }: SuperadminDashboardClientProps) {
   const [activeTab, setActiveTab] = useState<ManagementTab>(defaultActiveTab);
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
@@ -257,18 +255,18 @@ export default function SuperadminDashboardClient({
     });
   }, [createdAdmins, adminSearch, restaurants]);
 
+  const pageTitle = activeTab === "admins" ? "Manage Restaurent Admin" : "Manage Restaurent";
+
   return (
     <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/3">
-      <h1 className="text-2xl font-semibold text-gray-800 dark:text-white/90">
-        {pageType === "owners" ? "Manage Owners" : "Manage Restaurants"}
-      </h1>
+      <h1 className="text-2xl font-semibold text-gray-800 dark:text-white/90">{pageTitle}</h1>
       {error ? <p className="mt-2 text-sm text-error-500">{error}</p> : null}
       {adminError ? <p className="mt-2 text-sm text-error-500">{adminError}</p> : null}
       {adminSuccess ? (
         <p className="mt-2 text-sm text-success-600 dark:text-success-400">{adminSuccess}</p>
       ) : null}
 
-      {showTabSwitcher && (
+      {showTabSwitcher ? (
         <div className="mt-6 inline-flex rounded-lg border border-gray-200 bg-gray-50 p-1 dark:border-gray-700 dark:bg-gray-900">
           <button
             type="button"
@@ -279,7 +277,7 @@ export default function SuperadminDashboardClient({
                 : "text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
             }`}
           >
-            {pageType === "owners" ? "Manage Owners" : "Manage Restaurants"}
+            Manage Restaurants
           </button>
           <button
             type="button"
@@ -290,9 +288,10 @@ export default function SuperadminDashboardClient({
                 : "text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
             }`}
           >
+            Manage Restaurant Admins
           </button>
         </div>
-      )}
+      ) : null}
 
       {activeTab === "restaurants" ? (
         <section className="mt-6 space-y-4">
