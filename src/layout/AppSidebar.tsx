@@ -7,15 +7,17 @@ import { usePathname } from "next/navigation";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useSidebar } from "../context/SidebarContext";
 import {
-    // BoxCubeIcon,
-    // CalenderIcon,
-    BoxCubeIcon,
-    ChevronDownIcon,
-  GroupIcon,
-    GridIcon,
-    HorizontaLDots,
-  UserIcon,
+  // BoxCubeIcon,
+  // CalenderIcon,
+  BoxCubeIcon,
   BoxIconLine,
+  ChevronDownIcon,
+  DollarLineIcon,
+  GridIcon,
+  GroupIcon,
+  HorizontaLDots,
+  PieChartIcon,
+  UserIcon,
 } from "../icons/index";
 // import SidebarWidget from "./SidebarWidget";
 
@@ -28,12 +30,39 @@ type NavItem = {
 };
 
 const navItems: NavItem[] = [
+  // Super Admin Items
   {
     icon: <GridIcon />,
     name: "Dashboard",
     path: "/superadmin-dashboard",
     roles: ["superadmin"],
   },
+  {
+    icon: <BoxCubeIcon />,
+    name: "Restaurants",
+    path: "/manage-restaurent",
+    roles: ["superadmin"],
+  },
+  {
+    icon: <GroupIcon />,
+    name: "Owners",
+    path: "/manage-restaurant-admins",
+    roles: ["superadmin"],
+  },
+  {
+    icon: <PieChartIcon />,
+    name: "Reports",
+    path: "/reports",
+    roles: ["superadmin"],
+  },
+  {
+    icon: <DollarLineIcon />,
+    name: "Subscriptions",
+    path: "/subscriptions",
+    roles: ["superadmin"],
+  },
+  
+  // Admin Items
   {
     icon: <GridIcon />,
     name: "Dashboard",
@@ -58,23 +87,13 @@ const navItems: NavItem[] = [
     path: "/manage-inventory",
     roles: ["admin"],
   },
+  
+  // Cashier Items
   {
     icon: <GridIcon />,
     name: "Dashboard",
     path: "/cashier-dashboard",
     roles: ["cashier"],
-  },
-  {
-    icon: <UserIcon />,
-    name: "User Profile",
-    path: "/profile",
-    roles: ["superadmin", "admin", "cashier"],
-  },
-  {
-    icon: <BoxCubeIcon />,
-    name: "Manage Restaurent",
-    path: "/manage-restaurent",
-    roles: ["superadmin"],
   },
   // {
   //   icon: <CalenderIcon />,

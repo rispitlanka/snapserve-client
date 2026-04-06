@@ -414,12 +414,7 @@ export default function RestaurantAdminManagementClient({
         <section className="space-y-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h2 className="text-lg font-semibold text-gray-800 dark:text-white/90">
-                Restaurant Cashiers
-              </h2>
-              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                Add, edit, and remove cashier accounts.
-              </p>
+              
             </div>
             <button
               type="button"
@@ -517,12 +512,6 @@ export default function RestaurantAdminManagementClient({
         <section className="space-y-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h2 className="text-lg font-semibold text-gray-800 dark:text-white/90">
-                Suppliers
-              </h2>
-              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                Track suppliers associated with the restaurant.
-              </p>
             </div>
             <button
               type="button"

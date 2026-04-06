@@ -38,6 +38,12 @@ export type DashboardSummary = {
   totalRestaurants: number;
   totalRestaurantAdmins: number;
   activeRestaurants: number;
+  totalOwners: number;
+  newRestaurants: number;
+  monthlyRevenue: number;
+  activeSubscriptions: number;
+  expiredSubscriptions: number;
+  pendingSubscriptions: number;
 };
 
 export type ChangePasswordPayload = {
