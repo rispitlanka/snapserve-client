@@ -1,3 +1,4 @@
+import Link from "next/link";
 import React from "react";
 
 type MetricCardProps = {
@@ -7,6 +8,7 @@ type MetricCardProps = {
   icon: React.ReactNode;
   accentClassName: string;
   isLoading?: boolean;
+  href?: string;
 };
 
 export default function MetricCard({
@@ -16,8 +18,9 @@ export default function MetricCard({
   icon,
   accentClassName,
   isLoading = false,
+  href,
 }: MetricCardProps) {
-  return (
+  const content = (
     <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-theme-xs dark:border-gray-800 dark:bg-white/3 md:p-6">
       <div className={`flex h-12 w-12 items-center justify-center rounded-xl ${accentClassName}`}>
         {icon}
@@ -38,4 +41,17 @@ export default function MetricCard({
       </div>
     </div>
   );
+
+  if (href) {
+    return (
+      <Link
+        href={href}
+        className="block rounded-2xl transition-transform hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40"
+      >
+        {content}
+      </Link>
+    );
+  }
+
+  return content;
 }

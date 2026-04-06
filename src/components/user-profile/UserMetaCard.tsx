@@ -1,11 +1,18 @@
 "use client";
 import { getAuthSession } from "@/lib/auth";
+import { useEffect, useState } from "react";
 
 export default function UserMetaCard() {
-  const session = getAuthSession();
-  const role = session?.user?.role ?? "-";
-  const userName = session?.user?.name ?? "-";
-  const restaurant = session?.user?.restaurantId ?? "-";
+  const [role, setRole] = useState("-");
+  const [userName, setUserName] = useState("-");
+  const [restaurant, setRestaurant] = useState("-");
+
+  useEffect(() => {
+    const session = getAuthSession();
+    setRole(session?.user?.role ?? "-");
+    setUserName(session?.user?.name ?? "-");
+    setRestaurant(session?.user?.restaurantId ?? "-");
+  }, []);
 
   return (
     <div className="rounded-2xl border border-gray-200 p-5 dark:border-gray-800 lg:p-6">
