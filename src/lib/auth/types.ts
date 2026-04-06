@@ -80,6 +80,7 @@ export type UpdateStaffPayload = {
   name?: string;
   password?: string;
   role?: "SUPER_ADMIN" | "RESTAURANT_ADMIN" | "CASHIER" | "WAITER";
+  isActive?: boolean;
 };
 
 export type Supplier = {

@@ -3,20 +3,19 @@ import Checkbox from "@/components/form/input/Checkbox";
 import Input from "@/components/form/input/InputField";
 import Label from "@/components/form/Label";
 import Button from "@/components/ui/button/Button";
-import { EnvelopeIcon, EyeCloseIcon, EyeIcon, LockIcon, UserIcon } from "@/icons";
+import { DollarLineIcon, EnvelopeIcon, EyeCloseIcon, EyeIcon, LockIcon, UserIcon } from "@/icons";
 import {
-  getAuthSession,
-  login,
-  parseAuthSession,
-  ROLE_DASHBOARD_ROUTE,
-  saveAuthSession,
-  UserRole,
+    getAuthSession,
+    login,
+    parseAuthSession,
+    ROLE_DASHBOARD_ROUTE,
+    saveAuthSession,
+    UserRole,
 } from "@/lib/auth";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
 import toast from "react-hot-toast";
-import { MdPointOfSale } from "react-icons/md";
 
 export default function SignInForm() {
   const router = useRouter();
@@ -86,7 +85,7 @@ export default function SignInForm() {
       <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-xl dark:border-slate-800 dark:bg-slate-900 sm:p-8">
         <div className="mb-6 text-center sm:mb-8">
           <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-100 text-amber-700 shadow-sm dark:bg-amber-300/20 dark:text-amber-200">
-            <MdPointOfSale className="h-8 w-8" aria-hidden="true" />
+            <DollarLineIcon className="h-8 w-8" aria-hidden="true" />
           </div>
           <h1 className="text-xl font-semibold tracking-tight text-slate-900 dark:text-white sm:text-2xl">
             Restaurent POS

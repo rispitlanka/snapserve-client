@@ -29,11 +29,13 @@ type ManagementTab = "restaurants" | "admins";
 type SuperadminDashboardClientProps = {
   defaultActiveTab?: ManagementTab;
   showTabSwitcher?: boolean;
+  pageType?: "owners" | "admins";
 };
 
 export default function SuperadminDashboardClient({
   defaultActiveTab = "restaurants",
   showTabSwitcher = true,
+  pageType = "admins",
 }: SuperadminDashboardClientProps) {
   const [activeTab, setActiveTab] = useState<ManagementTab>(defaultActiveTab);
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
@@ -297,7 +299,6 @@ export default function SuperadminDashboardClient({
         <section className="mt-6 space-y-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <h2 className="text-lg font-semibold text-gray-800 dark:text-white/90">
-              Restaurant Directory
             </h2>
             <button
               type="button"

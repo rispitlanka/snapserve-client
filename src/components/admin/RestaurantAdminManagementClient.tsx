@@ -1,6 +1,6 @@
 "use client";
 
-import type { Staff, Supplier, UpdateStaffPayload } from "@/lib/auth";
+import type { Staff, Supplier } from "@/lib/auth";
 import {
   createStaff,
   createSupplier,
@@ -20,12 +20,10 @@ import Button from "../ui/button/Button";
 import { Modal } from "../ui/modal";
 
 type AdminTab = "staff" | "suppliers";
-type StaffMode = "create" | "edit";
 
 type StaffFormState = {
   name: string;
   password: string;
-  role: "CASHIER" | "WAITER";
 };
 
 type SupplierFormState = {
@@ -42,7 +40,6 @@ type RestaurantAdminManagementClientProps = {
 const emptyStaffForm: StaffFormState = {
   name: "",
   password: "",
-  role: "CASHIER",
 };
 
 const emptySupplierForm: SupplierFormState = {
@@ -73,12 +70,11 @@ export default function RestaurantAdminManagementClient({
   const [isStaffModalOpen, setIsStaffModalOpen] = useState(false);
   const [isSupplierModalOpen, setIsSupplierModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [staffMode, setStaffMode] = useState<StaffMode>("create");
-  const [editingStaffId, setEditingStaffId] = useState<string | null>(null);
   const [deletingStaff, setDeletingStaff] = useState<Staff | null>(null);
   const [isSavingStaff, setIsSavingStaff] = useState(false);
   const [isSavingSupplier, setIsSavingSupplier] = useState(false);
   const [isDeletingStaff, setIsDeletingStaff] = useState(false);
+  const [updatingStaffId, setUpdatingStaffId] = useState<string | null>(null);
   const [staffForm, setStaffForm] = useState<StaffFormState>(emptyStaffForm);
   const [supplierForm, setSupplierForm] = useState<SupplierFormState>(emptySupplierForm);
 
@@ -154,29 +150,16 @@ export default function RestaurantAdminManagementClient({
     }
   };
 
-  const openStaffModal = (mode: StaffMode, record?: Staff) => {
+  const openStaffModal = () => {
     setStaffError("");
     setStaffSuccess("");
-    setStaffMode(mode);
 
-    if (record) {
-      setEditingStaffId(record.id);
-      setStaffForm({
-        name: record.name,
-        password: "",
-        role: (record.role?.toUpperCase() ?? "CASHIER") as "CASHIER" | "WAITER",
-      });
-    } else {
-      setEditingStaffId(null);
-      setStaffForm(emptyStaffForm);
-    }
-
+    setStaffForm(emptyStaffForm);
     setIsStaffModalOpen(true);
   };
 
   const closeStaffModal = () => {
     setIsStaffModalOpen(false);
-    setEditingStaffId(null);
     setStaffForm(emptyStaffForm);
   };
 
@@ -206,7 +189,7 @@ export default function RestaurantAdminManagementClient({
     const query = normalizeText(staffSearch);
     if (!query) return staff;
     return staff.filter((record) => {
-      const searchable = `${record.name} ${record.email ?? ""} ${record.phone ?? ""} ${record.role}`;
+      const searchable = `${record.name} ${record.email ?? ""} ${record.phone ?? ""}`;
       return searchable.toLowerCase().includes(query);
     });
   }, [staff, staffSearch]);
@@ -233,7 +216,7 @@ export default function RestaurantAdminManagementClient({
       return;
     }
 
-    if (staffMode === "create" && trimmedPassword.length < 6) {
+    if (trimmedPassword.length < 6) {
       setStaffError("Password must be at least 6 characters.");
       return;
     }
@@ -246,24 +229,13 @@ export default function RestaurantAdminManagementClient({
 
     setIsSavingStaff(true);
     try {
-      if (staffMode === "create") {
-        await createStaff(session.accessToken, {
-          name: trimmedName,
-          password: trimmedPassword,
-          role: staffForm.role,
-        });
-        setStaffSuccess("Staff member created successfully.");
-        toast.success("Staff member created successfully.");
-      } else if (editingStaffId) {
-        const payload: UpdateStaffPayload = {
-          name: trimmedName,
-          role: staffForm.role,
-        };
-
-        await updateStaff(session.accessToken, editingStaffId, payload);
-        setStaffSuccess("Staff member updated successfully.");
-        toast.success("Staff member updated successfully.");
-      }
+      await createStaff(session.accessToken, {
+        name: trimmedName,
+        password: trimmedPassword,
+        role: "CASHIER",
+      });
+      setStaffSuccess("Staff member created successfully.");
+      toast.success("Staff member created successfully.");
 
       closeStaffModal();
       await refreshStaff();
@@ -299,6 +271,37 @@ export default function RestaurantAdminManagementClient({
       toast.error(message);
     } finally {
       setIsDeletingStaff(false);
+    }
+  };
+
+  const handleToggleStaffStatus = async (record: Staff) => {
+    const session = getAuthSession();
+    if (!session) {
+      setStaffError("Session not found. Please sign in again.");
+      return;
+    }
+
+    setUpdatingStaffId(record.id);
+    setStaffError("");
+    setStaffSuccess("");
+
+    try {
+      await updateStaff(session.accessToken, record.id, {
+        isActive: !record.isActive,
+      });
+      setStaffSuccess(
+        `Staff member ${!record.isActive ? "activated" : "deactivated"} successfully.`
+      );
+      toast.success(
+        `Staff member ${!record.isActive ? "activated" : "deactivated"} successfully.`
+      );
+      await refreshStaff();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to update staff status.";
+      setStaffError(message);
+      toast.error(message);
+    } finally {
+      setUpdatingStaffId(null);
     }
   };
 
@@ -367,9 +370,9 @@ export default function RestaurantAdminManagementClient({
       : "Manage Suppliers";
 
   const pageDescription = showTabSwitcher
-    ? "Manage cashier staff and suppliers for your restaurant."
+    ? "Manage staff and suppliers for your restaurant."
     : activeTab === "staff"
-      ? "Add, edit, and remove cashier and waiter accounts."
+      ? "Add staff members and toggle their active status."
       : "Create and manage suppliers for your restaurant.";
 
   return (
@@ -413,15 +416,12 @@ export default function RestaurantAdminManagementClient({
       {activeTab === "staff" ? (
         <section className="space-y-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              
-            </div>
             <button
               type="button"
-              onClick={() => openStaffModal("create")}
+              onClick={openStaffModal}
               className="inline-flex items-center justify-center rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600"
             >
-              Add Cashier
+              Add Staff
             </button>
           </div>
 
@@ -433,7 +433,7 @@ export default function RestaurantAdminManagementClient({
               type="text"
               value={staffSearch}
               onChange={(event) => setStaffSearch(event.target.value)}
-              placeholder="Search staff by name, email, phone, or role"
+              placeholder="Search staff by name, email, or phone"
               className="h-10 w-full rounded-lg border border-gray-300 bg-transparent px-3 text-sm text-gray-800 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 md:max-w-sm"
             />
 
@@ -442,7 +442,6 @@ export default function RestaurantAdminManagementClient({
                 <thead>
                   <tr className="text-left text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400">
                     <th className="px-3 py-3">Name</th>
-                    <th className="px-3 py-3">Role</th>
                     <th className="px-3 py-3">Status</th>
                     <th className="px-3 py-3 text-right">Actions</th>
                   </tr>
@@ -450,13 +449,13 @@ export default function RestaurantAdminManagementClient({
                 <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
                   {isLoadingStaff ? (
                     <tr>
-                      <td colSpan={4} className="px-3 py-6 text-sm text-gray-500 dark:text-gray-400">
+                      <td colSpan={3} className="px-3 py-6 text-sm text-gray-500 dark:text-gray-400">
                         Loading staff...
                       </td>
                     </tr>
                   ) : staffFiltered.length === 0 ? (
                     <tr>
-                      <td colSpan={4} className="px-3 py-6 text-sm text-gray-500 dark:text-gray-400">
+                      <td colSpan={3} className="px-3 py-6 text-sm text-gray-500 dark:text-gray-400">
                         No staff found.
                       </td>
                     </tr>
@@ -465,9 +464,6 @@ export default function RestaurantAdminManagementClient({
                       <tr key={record.id}>
                         <td className="px-3 py-3 text-sm text-gray-800 dark:text-gray-100">
                           {record.name}
-                        </td>
-                        <td className="px-3 py-3 text-sm text-gray-600 dark:text-gray-300">
-                          {record.role || "-"}
                         </td>
                         <td className="px-3 py-3 text-sm">
                           <span
@@ -481,14 +477,37 @@ export default function RestaurantAdminManagementClient({
                           </span>
                         </td>
                         <td className="px-3 py-3 text-right">
-                          <div className="inline-flex items-center gap-2">
-                            <button
-                              type="button"
-                              onClick={() => openStaffModal("edit", record)}
-                              className="rounded-md border border-gray-300 px-2.5 py-1 text-xs text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
-                            >
-                              Edit
-                            </button>
+                          <div className="inline-flex items-center gap-3">
+                            <label className="inline-flex cursor-pointer items-center gap-2">
+                              <input
+                                type="checkbox"
+                                checked={record.isActive}
+                                disabled={updatingStaffId === record.id}
+                                onChange={() => handleToggleStaffStatus(record)}
+                                className="sr-only"
+                                aria-label={`${record.name} is ${record.isActive ? "active" : "inactive"}`}
+                              />
+                              <span
+                                className={`relative h-6 w-11 rounded-full transition-colors duration-200 ${
+                                  record.isActive
+                                    ? "bg-success-500"
+                                    : "bg-gray-300 dark:bg-gray-700"
+                                } ${updatingStaffId === record.id ? "opacity-70" : ""}`}
+                              >
+                                <span
+                                  className={`absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-200 ${
+                                    record.isActive ? "translate-x-5" : "translate-x-0"
+                                  }`}
+                                />
+                              </span>
+                              <span className="text-xs font-medium text-gray-600 dark:text-gray-300">
+                                {updatingStaffId === record.id
+                                  ? "Updating..."
+                                  : record.isActive
+                                    ? "On"
+                                    : "Off"}
+                              </span>
+                            </label>
                             <button
                               type="button"
                               onClick={() => openDeleteModal(record)}
@@ -582,12 +601,10 @@ export default function RestaurantAdminManagementClient({
         <div className="space-y-5">
           <div>
             <h3 className="text-xl font-semibold text-gray-800 dark:text-white/90">
-              {staffMode === "create" ? "Add Cashier" : "Edit Cashier"}
+              Add Staff
             </h3>
             <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-              {staffMode === "create"
-                ? "Create a cashier account for your restaurant."
-                : "Update cashier details and optional password."}
+              Create a staff account for your restaurant.
             </p>
           </div>
 
@@ -604,26 +621,12 @@ export default function RestaurantAdminManagementClient({
 
             <div>
               <Label>Password</Label>
-              {staffMode === "create" ? (
-                <Input
-                  type="password"
-                  value={staffForm.password}
-                  onChange={(event) => setStaffForm((prev) => ({ ...prev, password: event.target.value }))}
-                  placeholder="Minimum 6 characters"
-                />
-              ) : null}
-            </div>
-
-            <div>
-              <Label>Role</Label>
-              <select
-                value={staffForm.role}
-                onChange={(event) => setStaffForm((prev) => ({ ...prev, role: event.target.value as "CASHIER" | "WAITER" }))}
-                className="w-full rounded border border-gray-300 px-3 py-2 text-gray-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-              >
-                <option value="CASHIER">Cashier</option>
-                <option value="WAITER">Waiter</option>
-              </select>
+              <Input
+                type="password"
+                value={staffForm.password}
+                onChange={(event) => setStaffForm((prev) => ({ ...prev, password: event.target.value }))}
+                placeholder="Minimum 6 characters"
+              />
             </div>
 
             <div className="flex items-center justify-end gap-3">
@@ -631,7 +634,7 @@ export default function RestaurantAdminManagementClient({
                 Cancel
               </Button>
               <Button type="submit" size="sm" disabled={isSavingStaff}>
-                {isSavingStaff ? "Saving..." : "Save Cashier"}
+                {isSavingStaff ? "Saving..." : "Save Staff"}
               </Button>
             </div>
           </form>
@@ -698,12 +701,12 @@ export default function RestaurantAdminManagementClient({
         <div className="space-y-5">
           <div>
             <h3 className="text-xl font-semibold text-gray-800 dark:text-white/90">
-              Delete Cashier
+              Delete Staff
             </h3>
             <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
               {deletingStaff
                 ? `Are you sure you want to delete ${deletingStaff.name}? This action cannot be undone.`
-                : "Are you sure you want to delete this cashier?"}
+                : "Are you sure you want to delete this staff member?"}
             </p>
           </div>
 

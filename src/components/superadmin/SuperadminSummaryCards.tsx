@@ -1,12 +1,11 @@
 "use client";
 
 import MetricCard from "@/components/common/MetricCard";
-import { BoxCubeIcon, DollarLineIcon, GroupIcon, PieChartIcon, UserIcon } from "@/icons";
+import { ArrowUpIcon, BoxCubeIcon, DollarLineIcon, GroupIcon, PieChartIcon, UserIcon } from "@/icons";
 import type { DashboardSummary } from "@/lib/auth";
 import { getAuthSession, listRestaurantAdmins, listRestaurants, ROLE_DASHBOARD_ROUTE } from "@/lib/auth";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { FiCreditCard, FiTrendingUp } from "react-icons/fi";
 
 const toList = (rawData: unknown): Array<Record<string, unknown>> => {
   if (Array.isArray(rawData)) return rawData as Array<Record<string, unknown>>;
@@ -35,10 +34,6 @@ const getDateValue = (value: unknown) => {
 export default function SuperadminSummaryCards() {
   const router = useRouter();
   const [summary, setSummary] = useState<DashboardSummary & {
-    newRestaurants: number;
-    monthlyRevenue: number;
-    activeSubscriptions: number;
-    expiredSubscriptions: number;
     pendingPayments: number;
   }>({
     totalRestaurants: 0,
@@ -50,10 +45,6 @@ export default function SuperadminSummaryCards() {
     activeSubscriptions: 0,
     expiredSubscriptions: 0,
     pendingSubscriptions: 0,
-    newRestaurants: 0,
-    monthlyRevenue: 0,
-    activeSubscriptions: 0,
-    expiredSubscriptions: 0,
     pendingPayments: 0,
   });
   const [isLoading, setIsLoading] = useState(true);
@@ -95,10 +86,12 @@ export default function SuperadminSummaryCards() {
           totalRestaurants: restaurants.length,
           totalRestaurantAdmins: admins.length,
           activeRestaurants: restaurants.filter((restaurant) => Boolean(restaurant.isActive)).length,
-          newRestaurants: Math.floor(restaurants.length * 0.15),
+          totalOwners: admins.length,
+          newRestaurants,
           monthlyRevenue: restaurants.length * 5000,
           activeSubscriptions: Math.floor(restaurants.length * 0.85),
           expiredSubscriptions: Math.floor(restaurants.length * 0.15),
+          pendingSubscriptions: Math.floor(restaurants.length * 0.1),
           pendingPayments: Math.floor(restaurants.length * 0.25),
         });
       } catch (err) {
@@ -141,7 +134,7 @@ export default function SuperadminSummaryCards() {
           title="Active Restaurants"
           value={summary.activeRestaurants.toLocaleString()}
           description="Restaurants currently marked active"
-          icon={<FiTrendingUp className="size-6 text-success-600 dark:text-success-400" />}
+          icon={<ArrowUpIcon className="size-6 text-success-600 dark:text-success-400" />}
           accentClassName="bg-success-50 dark:bg-success-500/10"
           isLoading={isLoading}
         />
