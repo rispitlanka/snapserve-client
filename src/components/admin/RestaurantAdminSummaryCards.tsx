@@ -4,6 +4,7 @@ import MetricCard from "@/components/common/MetricCard";
 import FlatpickrDateInput from "@/components/form/FlatpickrDateInput";
 import { BoxCubeIcon, DollarLineIcon, GroupIcon, UserIcon } from "@/icons";
 import { AUTH_API_BASE_URL, getAuthSession, listStaff, listSuppliers, ROLE_DASHBOARD_ROUTE } from "@/lib/auth";
+import { formatDateTimeForDisplay } from "@/lib/format";
 import { listInventoryItems } from "@/lib/inventory";
 import type { ApexOptions } from "apexcharts";
 import dynamic from "next/dynamic";
@@ -70,9 +71,6 @@ const getDate = (value: unknown): Date | null => {
 const isAfter = (date: Date, compare: Date) => date.getTime() >= compare.getTime();
 
 const parseOrdersFromAny = (raw: unknown): Array<Record<string, unknown>> => getList(raw);
-
-const humanTime = (value: Date) =>
-  value.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
 const toDateInputValue = (date: Date) => {
   const year = date.getFullYear();
@@ -290,7 +288,7 @@ export default function RestaurantAdminSummaryCards() {
                 customer: customerName || "Walk-in Customer",
                 amount,
                 status: String(order.status ?? order.orderStatus ?? "Pending"),
-                timeLabel: humanTime(createdAt),
+                timeLabel: formatDateTimeForDisplay(createdAt),
               },
             });
           }

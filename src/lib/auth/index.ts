@@ -16,6 +16,7 @@ export {
     parseAuthSession,
     refreshSession,
     selectRegister,
+    updateRestaurant,
     updateRestaurantAdmin,
     updateStaff
 } from "./api";
@@ -39,4 +40,5 @@ export type {
     UpdateStaffPayload,
     UserRole
 } from "./types";
+export type { UpdateRestaurantPayload } from "./api";
 

@@ -6,6 +6,8 @@ import { useEffect, useId, useRef } from "react";
 
 type FlatpickrDateInputProps = {
   label: string;
+  /** When true, no label is rendered (use an external `<Label>` for alignment). */
+  hideLabel?: boolean;
   value: string;
   onChange: (dateStr: string) => void;
   minDate?: string;
@@ -18,6 +20,7 @@ type FlatpickrDateInputProps = {
  */
 export default function FlatpickrDateInput({
   label,
+  hideLabel = false,
   value,
   onChange,
   minDate,
@@ -86,12 +89,14 @@ export default function FlatpickrDateInput({
 
   return (
     <div className={className}>
-      <label
-        htmlFor={inputId}
-        className="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400"
-      >
-        {label}
-      </label>
+      {!hideLabel ? (
+        <label
+          htmlFor={inputId}
+          className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400"
+        >
+          {label}
+        </label>
+      ) : null}
       <div className="relative">
         <input
           ref={inputRef}
@@ -99,7 +104,8 @@ export default function FlatpickrDateInput({
           type="text"
           readOnly
           placeholder="Select date"
-          className="h-10 w-full cursor-pointer rounded-lg border border-gray-300 bg-transparent pr-10 pl-3 text-sm text-gray-800 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+          aria-label={hideLabel ? label : undefined}
+          className="h-11 w-full cursor-pointer rounded-lg border border-gray-300 bg-transparent pr-10 pl-3 text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
         />
         <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400">
           <CalenderIcon className="size-5" />

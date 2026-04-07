@@ -28,6 +28,7 @@ import {
   listInventorySubCategories,
   updateInventoryItemCurrentStock,
 } from "@/lib/inventory";
+import { formatDateTimeForDisplay } from "@/lib/format";
 import { useClientPagedSlice } from "@/lib/pagination/clientPaging";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -43,12 +44,6 @@ type BrandFormState = { name: string };
 const emptyCategoryForm: CategoryFormState = { name: "" };
 const emptySubCategoryForm: SubCategoryFormState = { name: "", categoryId: "" };
 const emptyBrandForm: BrandFormState = { name: "" };
-
-const formatDate = (value: string) => {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value || "-";
-  return date.toLocaleDateString();
-};
 
 const localeSort = (a: string, b: string) => a.localeCompare(b, undefined, { sensitivity: "base" });
 
@@ -1087,7 +1082,9 @@ export default function InventoryManagementClient({
                       <TableBody className="divide-y divide-gray-100 dark:divide-gray-800">
                         {historyPaged.slice.map((entry, index) => (
                           <TableRow key={entry.id ?? `${entry.date}-${index}`} className="bg-white dark:bg-transparent">
-                            <TableCell className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">{formatDate(entry.date)}</TableCell>
+                            <TableCell className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
+                              {formatDateTimeForDisplay(entry.date)}
+                            </TableCell>
                             <TableCell className="px-4 py-3 text-sm text-gray-800 dark:text-gray-100">{entry.description || "History entry"}</TableCell>
                             <TableCell className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">{entry.qty || "-"}</TableCell>
                             <TableCell className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">{entry.endingStock || "-"}</TableCell>

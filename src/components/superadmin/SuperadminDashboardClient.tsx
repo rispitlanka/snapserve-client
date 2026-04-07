@@ -9,6 +9,7 @@ import {
   getAuthSession,
   listRestaurantAdmins,
   listRestaurants,
+  updateRestaurant,
   updateRestaurantAdmin,
 } from "@/lib/auth";
 import { useClientPagedSlice } from "@/lib/pagination/clientPaging";
@@ -19,6 +20,7 @@ type Restaurant = {
   id: string;
   restaurantId: string;
   name: string;
+  mobileNumber: string;
   isActive: boolean;
 };
 
@@ -68,6 +70,7 @@ export default function SuperadminDashboardClient({
   const [adminLoading, setAdminLoading] = useState(false);
   const [restaurantPage, setRestaurantPage] = useState(1);
   const [restaurantPageSize, setRestaurantPageSize] = useState(10);
+  const [updatingRestaurantKey, setUpdatingRestaurantKey] = useState<string | null>(null);
   const [adminPage, setAdminPage] = useState(1);
   const [adminPageSize, setAdminPageSize] = useState(10);
 
@@ -153,6 +156,9 @@ export default function SuperadminDashboardClient({
           (item.id as string) ||
           `RST${String(index + 1).padStart(3, "0")}`,
         name: (item.name as string) || "Restaurant",
+        mobileNumber: String(
+          item.mobileNumber ?? item.mobile_number ?? item.mobile ?? ""
+        ).trim(),
         isActive: Boolean(item.isActive),
       }));
 
@@ -196,6 +202,37 @@ export default function SuperadminDashboardClient({
       setAdminError("Failed to load restaurant admins.");
     } finally {
       setAdminLoading(false);
+    }
+  };
+
+  const handleToggleRestaurantActive = async (restaurant: Restaurant, nextActive: boolean) => {
+    const key = `${restaurant.id}:${restaurant.restaurantId}`;
+    if (updatingRestaurantKey === key) return;
+
+    setUpdatingRestaurantKey(key);
+    try {
+      const session = getAuthSession();
+      if (!session) throw new Error("Session not found");
+
+      await updateRestaurant(session.accessToken, restaurant.restaurantId, {
+        name: restaurant.name,
+        mobileNumber: restaurant.mobileNumber || "",
+        isActive: nextActive,
+      });
+
+      setRestaurants((prev) =>
+        prev.map((r) =>
+          r.id === restaurant.id && r.restaurantId === restaurant.restaurantId
+            ? { ...r, isActive: nextActive }
+            : r
+        )
+      );
+      toast.success(nextActive ? "Restaurant activated." : "Restaurant set to inactive.");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to update restaurant.";
+      toast.error(message);
+    } finally {
+      setUpdatingRestaurantKey(null);
     }
   };
 
@@ -496,15 +533,46 @@ export default function SuperadminDashboardClient({
                           {restaurant.restaurantId}
                         </td>
                         <td className="px-3 py-3 text-sm">
-                          <span
-                            className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                              restaurant.isActive
-                                ? "bg-success-50 text-success-700 dark:bg-success-500/10 dark:text-success-400"
-                                : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300"
-                            }`}
-                          >
-                            {restaurant.isActive ? "Active" : "Inactive"}
-                          </span>
+                          <div className="flex flex-wrap items-center gap-3">
+                            <span
+                              className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                                restaurant.isActive
+                                  ? "bg-success-50 text-success-700 dark:bg-success-500/10 dark:text-success-400"
+                                  : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300"
+                              }`}
+                            >
+                              {restaurant.isActive ? "Active" : "Inactive"}
+                            </span>
+                            <label className="inline-flex cursor-pointer items-center gap-2">
+                              <input
+                                type="checkbox"
+                                className="peer sr-only"
+                                checked={restaurant.isActive}
+                                disabled={
+                                  updatingRestaurantKey === `${restaurant.id}:${restaurant.restaurantId}`
+                                }
+                                onChange={(event) =>
+                                  void handleToggleRestaurantActive(restaurant, event.target.checked)
+                                }
+                              />
+                              <span
+                                className={`relative inline-block h-6 w-11 shrink-0 rounded-full transition-colors duration-200 ease-in-out peer-focus-visible:ring-2 peer-focus-visible:ring-brand-500/40 peer-disabled:opacity-50 ${
+                                  restaurant.isActive
+                                    ? "bg-brand-500"
+                                    : "bg-gray-200 dark:bg-white/15"
+                                }`}
+                              >
+                                <span
+                                  className={`pointer-events-none absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition duration-200 ease-in-out ${
+                                    restaurant.isActive ? "translate-x-5" : "translate-x-0"
+                                  }`}
+                                />
+                              </span>
+                              <span className="text-xs text-gray-600 dark:text-gray-400">
+                                {restaurant.isActive ? "On" : "Off"}
+                              </span>
+                            </label>
+                          </div>
                         </td>
                       </tr>
                     ))
