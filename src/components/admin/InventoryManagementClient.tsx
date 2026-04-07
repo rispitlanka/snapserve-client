@@ -434,44 +434,46 @@ export default function InventoryManagementClient({
 
       {error ? <p className="text-sm text-error-500">{error}</p> : null}
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <MetricCard
-          title="Categories"
-          value={activeCounts.categories.toLocaleString()}
-          description="Item categories available to this restaurant"
-          icon={<FolderIcon className="size-6 text-brand-600 dark:text-brand-400" />}
-          accentClassName="bg-brand-50 dark:bg-brand-500/10"
-          isLoading={isLoading}
-          href="/manage-inventory-categories"
-        />
-        <MetricCard
-          title="Sub-categories"
-          value={activeCounts.subCategories.toLocaleString()}
-          description="Nested category groups"
-          icon={<GroupIcon className="size-6 text-success-600 dark:text-success-400" />}
-          accentClassName="bg-success-50 dark:bg-success-500/10"
-          isLoading={isLoading}
-          href="/manage-inventory-sub-categories"
-        />
-        <MetricCard
-          title="Brands"
-          value={activeCounts.brands.toLocaleString()}
-          description="Inventory brands configured"
-          icon={<BoxCubeIcon className="size-6 text-warning-600 dark:text-warning-400" />}
-          accentClassName="bg-warning-50 dark:bg-warning-500/10"
-          isLoading={isLoading}
-          href="/manage-inventory-brands"
-        />
-        <MetricCard
-          title="Items"
-          value={activeCounts.items.toLocaleString()}
-          description="Tracked inventory items"
-          icon={<TableIcon className="size-6 text-indigo-600 dark:text-indigo-400" />}
-          accentClassName="bg-indigo-50 dark:bg-indigo-500/10"
-          isLoading={isLoading}
-          href="/manage-inventory-items"
-        />
-      </div>
+      {section === "overview" ? (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <MetricCard
+            title="Categories"
+            value={activeCounts.categories.toLocaleString()}
+            description="Item categories available to this restaurant"
+            icon={<FolderIcon className="size-6 text-brand-600 dark:text-brand-400" />}
+            accentClassName="bg-brand-50 dark:bg-brand-500/10"
+            isLoading={isLoading}
+            href="/manage-inventory-categories"
+          />
+          <MetricCard
+            title="Sub-categories"
+            value={activeCounts.subCategories.toLocaleString()}
+            description="Nested category groups"
+            icon={<GroupIcon className="size-6 text-success-600 dark:text-success-400" />}
+            accentClassName="bg-success-50 dark:bg-success-500/10"
+            isLoading={isLoading}
+            href="/manage-inventory-sub-categories"
+          />
+          <MetricCard
+            title="Brands"
+            value={activeCounts.brands.toLocaleString()}
+            description="Inventory brands configured"
+            icon={<BoxCubeIcon className="size-6 text-warning-600 dark:text-warning-400" />}
+            accentClassName="bg-warning-50 dark:bg-warning-500/10"
+            isLoading={isLoading}
+            href="/manage-inventory-brands"
+          />
+          <MetricCard
+            title="Items"
+            value={activeCounts.items.toLocaleString()}
+            description="Tracked inventory items"
+            icon={<TableIcon className="size-6 text-indigo-600 dark:text-indigo-400" />}
+            accentClassName="bg-indigo-50 dark:bg-indigo-500/10"
+            isLoading={isLoading}
+            href="/manage-inventory-items"
+          />
+        </div>
+      ) : null}
 
       {section === "categories" ? (
         <div className="space-y-4">

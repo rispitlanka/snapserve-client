@@ -26,6 +26,7 @@ type AdminTab = "staff" | "suppliers";
 type StaffFormState = {
   name: string;
   password: string;
+  role: "CASHIER" | "WAITER";
 };
 
 type SupplierFormState = {
@@ -42,6 +43,7 @@ type RestaurantAdminManagementClientProps = {
 const emptyStaffForm: StaffFormState = {
   name: "",
   password: "",
+  role: "CASHIER",
 };
 
 const emptySupplierForm: SupplierFormState = {
@@ -239,6 +241,7 @@ export default function RestaurantAdminManagementClient({
 
     const trimmedName = staffForm.name.trim();
     const trimmedPassword = staffForm.password.trim();
+    const selectedRole = staffForm.role;
 
     if (!trimmedName) {
       setStaffError("Staff name is required.");
@@ -258,14 +261,14 @@ export default function RestaurantAdminManagementClient({
 
     setIsSavingStaff(true);
     try {
-      await createStaff(session.accessToken, {
+      const created = await createStaff(session.accessToken, {
         name: trimmedName,
         password: trimmedPassword,
-        role: "CASHIER",
+        role: selectedRole,
       });
       setStaffSuccess("Staff member created successfully.");
       toast.success("Staff member created successfully.");
-
+      setStaff((prev) => [created, ...prev]);
       closeStaffModal();
       await refreshStaff();
     } catch (error) {
@@ -341,6 +344,7 @@ export default function RestaurantAdminManagementClient({
 
     const trimmedName = supplierForm.name.trim();
     const trimmedContactNumber = supplierForm.contactNumber.trim();
+    const normalizedContactNumber = trimmedContactNumber.replace(/\D/g, "");
     const trimmedDescription = supplierForm.description.trim();
 
     if (!trimmedName) {
@@ -350,6 +354,11 @@ export default function RestaurantAdminManagementClient({
 
     if (!trimmedContactNumber) {
       setSupplierError("Supplier contact number is required.");
+      return;
+    }
+
+    if (!/^[0-9]{10,15}$/.test(normalizedContactNumber)) {
+      setSupplierError("Contact number must be 10-15 digits (numbers only).");
       return;
     }
 
@@ -368,7 +377,7 @@ export default function RestaurantAdminManagementClient({
     try {
       await createSupplier(session.accessToken, {
         name: trimmedName,
-        contactNumber: trimmedContactNumber,
+        contactNumber: normalizedContactNumber,
         description: trimmedDescription,
       });
       setSupplierSuccess("Supplier created successfully.");
@@ -490,23 +499,21 @@ export default function RestaurantAdminManagementClient({
                     </tr>
                   ) : (
                     staffPaged.slice.map((record) => (
-                      <tr key={record.id}>
+                      <tr key={record.id} className="transition-colors hover:bg-gray-50/70 dark:hover:bg-white/5">
                         <td className="px-3 py-3 text-sm text-gray-800 dark:text-gray-100">
                           {record.name}
                         </td>
                         <td className="px-3 py-3 text-sm">
-                          <span
-                            className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                              record.isActive
-                                ? "bg-success-50 text-success-700 dark:bg-success-500/10 dark:text-success-400"
-                                : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300"
-                            }`}
-                          >
-                            {record.isActive ? "Active" : "Inactive"}
-                          </span>
-                        </td>
-                        <td className="px-3 py-3 text-right">
                           <div className="inline-flex items-center gap-3">
+                            <span
+                              className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                                record.isActive
+                                  ? "bg-success-50 text-success-700 dark:bg-success-500/10 dark:text-success-400"
+                                  : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300"
+                              }`}
+                            >
+                              {record.isActive ? "Active" : "Inactive"}
+                            </span>
                             <label className="inline-flex cursor-pointer items-center gap-2">
                               <input
                                 type="checkbox"
@@ -518,9 +525,7 @@ export default function RestaurantAdminManagementClient({
                               />
                               <span
                                 className={`relative h-6 w-11 rounded-full transition-colors duration-200 ${
-                                  record.isActive
-                                    ? "bg-success-500"
-                                    : "bg-gray-300 dark:bg-gray-700"
+                                  record.isActive ? "bg-success-500" : "bg-gray-300 dark:bg-gray-700"
                                 } ${updatingStaffId === record.id ? "opacity-70" : ""}`}
                               >
                                 <span
@@ -530,21 +535,19 @@ export default function RestaurantAdminManagementClient({
                                 />
                               </span>
                               <span className="text-xs font-medium text-gray-600 dark:text-gray-300">
-                                {updatingStaffId === record.id
-                                  ? "Updating..."
-                                  : record.isActive
-                                    ? "On"
-                                    : "Off"}
+                                {updatingStaffId === record.id ? "Updating..." : record.isActive ? "On" : "Off"}
                               </span>
                             </label>
-                            <button
-                              type="button"
-                              onClick={() => openDeleteModal(record)}
-                              className="rounded-md border border-error-300 px-2.5 py-1 text-xs text-error-500 hover:bg-error-50 dark:border-error-500/50 dark:hover:bg-error-500/10"
-                            >
-                              Delete
-                            </button>
                           </div>
+                        </td>
+                        <td className="px-3 py-3 text-right">
+                          <button
+                            type="button"
+                            onClick={() => openDeleteModal(record)}
+                            className="rounded-md border border-error-300 px-2.5 py-1 text-xs text-error-500 hover:bg-error-50 dark:border-error-500/50 dark:hover:bg-error-500/10"
+                          >
+                            Delete
+                          </button>
                         </td>
                       </tr>
                     ))
@@ -683,6 +686,23 @@ export default function RestaurantAdminManagementClient({
             </div>
 
             <div>
+              <Label>Role</Label>
+              <select
+                value={staffForm.role}
+                onChange={(event) =>
+                  setStaffForm((prev) => ({
+                    ...prev,
+                    role: event.target.value as "CASHIER" | "WAITER",
+                  }))
+                }
+                className="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+              >
+                <option value="CASHIER">Cashier</option>
+                <option value="WAITER">Waiter</option>
+              </select>
+            </div>
+
+            <div>
               <Label>Password</Label>
               <Input
                 type="password"
@@ -730,11 +750,14 @@ export default function RestaurantAdminManagementClient({
               <div>
                 <Label>Contact Number</Label>
                 <Input
-                  type="text"
+                  type="tel"
                   value={supplierForm.contactNumber}
                   onChange={(event) => setSupplierForm((prev) => ({ ...prev, contactNumber: event.target.value }))}
                   placeholder="9876543210"
                 />
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  Use 10-15 digits only.
+                </p>
               </div>
 
               <div>
