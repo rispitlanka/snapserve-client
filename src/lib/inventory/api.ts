@@ -9,6 +9,7 @@ import type {
   InventoryItem,
   InventoryItemHistoryEntry,
   InventorySubCategory,
+  UpdateInventoryItemStockPayload,
 } from "./types";
 
 const getAuthHeaders = (accessToken?: string) => {
@@ -385,6 +386,32 @@ export const createInventoryItem = async (
   const mapped = mapInventoryItem((body as { data?: unknown })?.data ?? body);
   if (!mapped) {
     throw new Error("Unexpected create inventory item response.");
+  }
+
+  return mapped;
+};
+
+/**
+ * Sets current on-hand stock for an item (`PATCH /inventory/items/:id`).
+ */
+export const updateInventoryItemCurrentStock = async (
+  accessToken: string,
+  itemId: string,
+  payload: UpdateInventoryItemStockPayload
+): Promise<InventoryItem> => {
+  const response = await makeRequest(
+    `${AUTH_API_BASE_URL}/inventory/items/${encodeURIComponent(itemId)}`,
+    {
+      method: "PATCH",
+      headers: getAuthHeaders(accessToken),
+      body: JSON.stringify({ currentStock: payload.currentStock }),
+    }
+  );
+
+  const body = await getResourceData(response, "Failed to update stock.");
+  const mapped = mapInventoryItem((body as { data?: unknown })?.data ?? body);
+  if (!mapped) {
+    throw new Error("Unexpected update inventory item response.");
   }
 
   return mapped;

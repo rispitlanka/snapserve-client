@@ -25,7 +25,8 @@ import {
   listInventoryBrands,
   listInventoryCategories,
   listInventoryItems,
-  listInventorySubCategories
+  listInventorySubCategories,
+  updateInventoryItemCurrentStock,
 } from "@/lib/inventory";
 import { useClientPagedSlice } from "@/lib/pagination/clientPaging";
 import { useRouter } from "next/navigation";
@@ -48,6 +49,17 @@ const formatDate = (value: string) => {
   if (Number.isNaN(date.getTime())) return value || "-";
   return date.toLocaleDateString();
 };
+
+const localeSort = (a: string, b: string) => a.localeCompare(b, undefined, { sensitivity: "base" });
+
+const sortByCreatedAtDesc = <T extends { createdAt: string }>(a: T, b: T) =>
+  new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+
+type NameRecentSort = "name" | "recent";
+type SubCategorySortOption = "category" | "name" | "recent";
+
+const inventorySelectClass =
+  "h-11 min-w-[12rem] rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90";
 
 type InventoryManagementClientProps = {
   section?: InventorySection;
@@ -101,6 +113,15 @@ export default function InventoryManagementClient({
   const [itemPageSize, setItemPageSize] = useState(10);
   const [historyPage, setHistoryPage] = useState(1);
   const [historyPageSize, setHistoryPageSize] = useState(10);
+
+  const [itemSearchQuery, setItemSearchQuery] = useState("");
+  const [categorySort, setCategorySort] = useState<NameRecentSort>("name");
+  const [brandSort, setBrandSort] = useState<NameRecentSort>("name");
+  const [subCategorySort, setSubCategorySort] = useState<SubCategorySortOption>("category");
+
+  const [showManualStockInput, setShowManualStockInput] = useState(false);
+  const [manualStockInput, setManualStockInput] = useState("");
+  const [isSavingStock, setIsSavingStock] = useState(false);
 
   const getScopedAdminSession = useCallback(() => {
     const session = getAuthSession();
@@ -217,10 +238,68 @@ export default function InventoryManagementClient({
     }, {});
   }, [categories]);
 
-  const categoryPaged = useClientPagedSlice(categories, categoryPage, categoryPageSize);
-  const subCategoryPaged = useClientPagedSlice(subCategories, subCategoryPage, subCategoryPageSize);
-  const brandPaged = useClientPagedSlice(brands, brandPage, brandPageSize);
-  const itemPaged = useClientPagedSlice(items, itemPage, itemPageSize);
+  const sortedCategories = useMemo(() => {
+    const list = [...categories];
+    if (categorySort === "name") {
+      list.sort((a, b) => localeSort(a.name, b.name));
+    } else {
+      list.sort(sortByCreatedAtDesc);
+    }
+    return list;
+  }, [categories, categorySort]);
+
+  const sortedBrands = useMemo(() => {
+    const list = [...brands];
+    if (brandSort === "name") {
+      list.sort((a, b) => localeSort(a.name, b.name));
+    } else {
+      list.sort(sortByCreatedAtDesc);
+    }
+    return list;
+  }, [brands, brandSort]);
+
+  const sortedSubCategories = useMemo(() => {
+    const list = [...subCategories];
+    const categoryLabel = (sub: InventorySubCategory) =>
+      sub.category?.name ?? categoryNameById[sub.categoryId] ?? "";
+
+    if (subCategorySort === "category") {
+      list.sort((a, b) => {
+        const byCat = localeSort(categoryLabel(a), categoryLabel(b));
+        if (byCat !== 0) return byCat;
+        return localeSort(a.name, b.name);
+      });
+    } else if (subCategorySort === "name") {
+      list.sort((a, b) => localeSort(a.name, b.name));
+    } else {
+      list.sort(sortByCreatedAtDesc);
+    }
+    return list;
+  }, [subCategories, subCategorySort, categoryNameById]);
+
+  const filteredItems = useMemo(() => {
+    const q = itemSearchQuery.trim().toLowerCase();
+    if (!q) return items;
+    return items.filter((item) => {
+      const haystack = [
+        item.name,
+        item.category?.name,
+        item.subCategory?.name,
+        item.brand?.name,
+        item.unit,
+        item.currentStock,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+      return haystack.includes(q);
+    });
+  }, [items, itemSearchQuery]);
+
+  const categoryPaged = useClientPagedSlice(sortedCategories, categoryPage, categoryPageSize);
+  const subCategoryPaged = useClientPagedSlice(sortedSubCategories, subCategoryPage, subCategoryPageSize);
+  const brandPaged = useClientPagedSlice(sortedBrands, brandPage, brandPageSize);
+  const itemPaged = useClientPagedSlice(filteredItems, itemPage, itemPageSize);
   const historyPaged = useClientPagedSlice(itemHistory, historyPage, historyPageSize);
 
   useEffect(() => {
@@ -246,6 +325,22 @@ export default function InventoryManagementClient({
   useEffect(() => {
     setHistoryPage(1);
   }, [selectedItemId]);
+
+  useEffect(() => {
+    setItemPage(1);
+  }, [itemSearchQuery]);
+
+  useEffect(() => {
+    setCategoryPage(1);
+  }, [categorySort]);
+
+  useEffect(() => {
+    setBrandPage(1);
+  }, [brandSort]);
+
+  useEffect(() => {
+    setSubCategoryPage(1);
+  }, [subCategorySort]);
 
   const renderEmptyState = (message: string) => (
     <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50 p-6 text-sm text-gray-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-400">
@@ -302,6 +397,50 @@ export default function InventoryManagementClient({
 
   const closeItemDetailModal = () => {
     setIsItemDetailModalOpen(false);
+    setShowManualStockInput(false);
+    setManualStockInput("");
+  };
+
+  const handleToggleManualAdjustment = () => {
+    setShowManualStockInput((prev) => {
+      const next = !prev;
+      if (next && selectedItem) {
+        setManualStockInput(selectedItem.currentStock);
+      }
+      return next;
+    });
+  };
+
+  const handleApplyManualStock = async () => {
+    if (!selectedItemId || !selectedItem) return;
+
+    const parsed = Number(manualStockInput);
+    if (Number.isNaN(parsed) || parsed < 0) {
+      toast.error("Enter a valid stock amount (0 or greater).");
+      return;
+    }
+
+    const session = getScopedAdminSession();
+    if (!session) return;
+
+    setIsSavingStock(true);
+    try {
+      const updated = await updateInventoryItemCurrentStock(session.accessToken, selectedItemId, {
+        currentStock: parsed,
+      });
+      setSelectedItem(updated);
+      setItems((prev) =>
+        prev.map((item) => (item.id === updated.id ? { ...item, currentStock: updated.currentStock } : item))
+      );
+      const history = await getInventoryItemHistory(session.accessToken, selectedItemId);
+      setItemHistory(history);
+      toast.success("Stock updated.");
+      setShowManualStockInput(false);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to update stock.");
+    } finally {
+      setIsSavingStock(false);
+    }
   };
 
   const handleCategorySave = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -442,20 +581,85 @@ export default function InventoryManagementClient({
             ? { label: "Add Sub-category", onClick: openSubCategoryModal, disabled: categories.length === 0 }
             : null;
 
+  const headerSortClass = `${inventorySelectClass} min-w-[11rem] max-w-full sm:max-w-[min(100%,18rem)]`;
+
   return (
     <section className="space-y-6 rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/3">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-2xl font-semibold text-gray-800 dark:text-white/90">{sectionHeading}</h1>
-        {sectionAction ? (
-          <Button
-            type="button"
-            size="sm"
-            onClick={sectionAction.onClick}
-            disabled={sectionAction.disabled}
-          >
-            {sectionAction.label}
-          </Button>
-        ) : null}
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between lg:gap-4">
+        <h1 className="min-w-0 shrink-0 text-2xl font-semibold text-gray-800 dark:text-white/90">{sectionHeading}</h1>
+
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2 sm:gap-3 lg:justify-end">
+          {section === "categories" && !isLoading && categories.length > 0 ? (
+            <div className="flex min-w-0 flex-1 items-center gap-2 sm:flex-initial">
+              <span className="shrink-0 text-sm font-medium text-gray-700 dark:text-gray-400">Sort</span>
+              <select
+                id="inventory-category-sort"
+                value={categorySort}
+                onChange={(event) => setCategorySort(event.target.value as NameRecentSort)}
+                className={headerSortClass}
+              >
+                <option value="name">Name (A–Z)</option>
+                <option value="recent">Recent (newest first)</option>
+              </select>
+            </div>
+          ) : null}
+
+          {section === "subCategories" && !isLoading && subCategories.length > 0 ? (
+            <div className="flex min-w-0 flex-1 items-center gap-2 sm:flex-initial">
+              <span className="shrink-0 text-sm font-medium text-gray-700 dark:text-gray-400">Sort</span>
+              <select
+                id="inventory-subcategory-sort"
+                value={subCategorySort}
+                onChange={(event) => setSubCategorySort(event.target.value as SubCategorySortOption)}
+                className={`${headerSortClass} sm:max-w-[min(100%,22rem)]`}
+              >
+                <option value="category">Category, then name</option>
+                <option value="name">Name (A–Z)</option>
+                <option value="recent">Recent (newest first)</option>
+              </select>
+            </div>
+          ) : null}
+
+          {section === "brands" && !isLoading && brands.length > 0 ? (
+            <div className="flex min-w-0 flex-1 items-center gap-2 sm:flex-initial">
+              <span className="shrink-0 text-sm font-medium text-gray-700 dark:text-gray-400">Sort</span>
+              <select
+                id="inventory-brand-sort"
+                value={brandSort}
+                onChange={(event) => setBrandSort(event.target.value as NameRecentSort)}
+                className={headerSortClass}
+              >
+                <option value="name">Name (A–Z)</option>
+                <option value="recent">Recent (newest first)</option>
+              </select>
+            </div>
+          ) : null}
+
+          {section === "items" && !isLoading && items.length > 0 ? (
+            <div className="flex w-full min-w-40 flex-1 sm:min-w-48 lg:max-w-md">
+              <Input
+                id="inventory-items-search"
+                type="text"
+                value={itemSearchQuery}
+                onChange={(event) => setItemSearchQuery(event.target.value)}
+                placeholder="Search name, category, brand..."
+                className="h-10! py-2"
+              />
+            </div>
+          ) : null}
+
+          {sectionAction ? (
+            <Button
+              type="button"
+              size="sm"
+              className="shrink-0"
+              onClick={sectionAction.onClick}
+              disabled={sectionAction.disabled}
+            >
+              {sectionAction.label}
+            </Button>
+          ) : null}
+        </div>
       </div>
 
       {error ? <p className="text-sm text-error-500">{error}</p> : null}
@@ -515,16 +719,12 @@ export default function InventoryManagementClient({
                 <TableHeader className="bg-gray-50 dark:bg-gray-900/60">
                   <TableRow className="text-left text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400">
                     <TableCell isHeader className="px-4 py-3">Name</TableCell>
-                    <TableCell isHeader className="px-4 py-3">Restaurant</TableCell>
-                    <TableCell isHeader className="px-4 py-3">Created</TableCell>
                   </TableRow>
                 </TableHeader>
                 <TableBody className="divide-y divide-gray-100 dark:divide-gray-800">
                   {categoryPaged.slice.map((category) => (
                     <TableRow key={category.id} className="bg-white dark:bg-transparent">
                       <TableCell className="px-4 py-3 text-sm text-gray-800 dark:text-gray-100">{category.name}</TableCell>
-                      <TableCell className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">{category.restaurantId}</TableCell>
-                      <TableCell className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">{formatDate(category.createdAt)}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -563,8 +763,6 @@ export default function InventoryManagementClient({
                   <TableRow className="text-left text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400">
                     <TableCell isHeader className="px-4 py-3">Name</TableCell>
                     <TableCell isHeader className="px-4 py-3">Category</TableCell>
-                                        <TableCell isHeader className="px-4 py-3">Sub-category</TableCell>
-                    <TableCell isHeader className="px-4 py-3">Restaurant</TableCell>
                   </TableRow>
                 </TableHeader>
                 <TableBody className="divide-y divide-gray-100 dark:divide-gray-800">
@@ -574,7 +772,6 @@ export default function InventoryManagementClient({
                       <TableCell className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
                         {subCategory.category?.name ?? categoryNameById[subCategory.categoryId] ?? "-"}
                       </TableCell>
-                      <TableCell className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">{subCategory.restaurantId}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -612,16 +809,12 @@ export default function InventoryManagementClient({
                 <TableHeader className="bg-gray-50 dark:bg-gray-900/60">
                   <TableRow className="text-left text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400">
                     <TableCell isHeader className="px-4 py-3">Name</TableCell>
-                    <TableCell isHeader className="px-4 py-3">Restaurant</TableCell>
-                    <TableCell isHeader className="px-4 py-3">Created</TableCell>
                   </TableRow>
                 </TableHeader>
                 <TableBody className="divide-y divide-gray-100 dark:divide-gray-800">
                   {brandPaged.slice.map((brand) => (
                     <TableRow key={brand.id} className="bg-white dark:bg-transparent">
                       <TableCell className="px-4 py-3 text-sm text-gray-800 dark:text-gray-100">{brand.name}</TableCell>
-                      <TableCell className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">{brand.restaurantId}</TableCell>
-                      <TableCell className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">{formatDate(brand.createdAt)}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -651,6 +844,8 @@ export default function InventoryManagementClient({
               renderEmptyState("Loading inventory items...")
             ) : items.length === 0 ? (
               renderEmptyState("No inventory items found.")
+            ) : filteredItems.length === 0 ? (
+              renderEmptyState("No items match your search.")
             ) : (
               <div className="overflow-hidden rounded-xl border border-gray-200 dark:border-gray-800">
                 <Table>
@@ -662,7 +857,6 @@ export default function InventoryManagementClient({
                       <TableCell isHeader className="px-4 py-3">Brand</TableCell>
                       <TableCell isHeader className="px-4 py-3">Unit</TableCell>
                       <TableCell isHeader className="px-4 py-3">Stock</TableCell>
-                      <TableCell isHeader className="px-4 py-3">Expiry</TableCell>
                     </TableRow>
                   </TableHeader>
                   <TableBody className="divide-y divide-gray-100 dark:divide-gray-800">
@@ -678,7 +872,6 @@ export default function InventoryManagementClient({
                         <TableCell className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">{item.brand?.name ?? item.brandId}</TableCell>
                         <TableCell className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">{item.unit}</TableCell>
                         <TableCell className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">{item.currentStock}</TableCell>
-                        <TableCell className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">{formatDate(item.expiryDate)}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -805,14 +998,71 @@ export default function InventoryManagementClient({
         </div>
       </Modal>
 
-      <Modal isOpen={isItemDetailModalOpen} onClose={closeItemDetailModal} className="max-w-[760px] p-4 sm:p-6">
+      <Modal
+        isOpen={isItemDetailModalOpen}
+        onClose={closeItemDetailModal}
+        showCloseButton={false}
+        className="max-w-[760px] p-4 sm:p-6"
+      >
         <div className="space-y-5">
-          <div>
-            <h3 className="text-xl font-semibold text-gray-800 dark:text-white/90">Item Details</h3>
-            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-              {selectedItem ? selectedItem.name : "Item information and purchase history."}
-            </p>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div className="min-w-0 pr-2">
+              <h3 className="text-xl font-semibold text-gray-800 dark:text-white/90">Purchase History</h3>
+              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                {selectedItem ? selectedItem.name : "Item history records"}
+              </p>
+            </div>
+            <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 sm:max-w-[min(100%,22rem)]">
+              <Button
+                type="button"
+                size="sm"
+                variant={showManualStockInput ? "outline" : "primary"}
+                onClick={handleToggleManualAdjustment}
+                disabled={!selectedItem || isItemDetailLoading}
+              >
+                Manual Adjustment
+              </Button>
+              <Button type="button" size="sm" variant="outline" onClick={closeItemDetailModal}>
+                Close
+              </Button>
+            </div>
           </div>
+
+          {showManualStockInput && selectedItem ? (
+            <div className="flex flex-col gap-3 rounded-xl border border-gray-200 p-4 dark:border-gray-800 sm:flex-row sm:items-end">
+              <div className="flex-1">
+                <Label htmlFor="manual-stock">New current stock ({selectedItem.unit})</Label>
+                <Input
+                  id="manual-stock"
+                  type="number"
+                  min="0"
+                  step={0.01}
+                  value={manualStockInput}
+                  onChange={(e) => setManualStockInput(e.target.value)}
+                  placeholder={String(selectedItem.currentStock)}
+                />
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={handleApplyManualStock}
+                  disabled={isSavingStock || isItemDetailLoading}
+                >
+                  {isSavingStock ? "Saving..." : "Update stock"}
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setShowManualStockInput(false)}
+                  disabled={isSavingStock}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          ) : null}
 
           {isItemDetailLoading ? (
             renderEmptyState("Loading item details...")
@@ -820,20 +1070,7 @@ export default function InventoryManagementClient({
             <p className="text-sm text-error-500">{itemDetailError}</p>
           ) : selectedItem ? (
             <>
-              <div className="rounded-xl border border-gray-200 p-4 dark:border-gray-800">
-                <h4 className="mb-3 font-semibold text-gray-800 dark:text-gray-100">Details</h4>
-                <dl className="space-y-2 text-sm">
-                  <div className="flex items-start justify-between gap-4"><dt className="text-gray-500 dark:text-gray-400">Category</dt><dd className="font-medium text-gray-800 dark:text-gray-100">{selectedItem.category?.name ?? selectedItem.categoryId}</dd></div>
-                  <div className="flex items-start justify-between gap-4"><dt className="text-gray-500 dark:text-gray-400">Sub-category</dt><dd className="font-medium text-gray-800 dark:text-gray-100">{selectedItem.subCategory?.name ?? selectedItem.subCategoryId}</dd></div>
-                  <div className="flex items-start justify-between gap-4"><dt className="text-gray-500 dark:text-gray-400">Brand</dt><dd className="font-medium text-gray-800 dark:text-gray-100">{selectedItem.brand?.name ?? selectedItem.brandId}</dd></div>
-                  <div className="flex items-start justify-between gap-4"><dt className="text-gray-500 dark:text-gray-400">Unit</dt><dd className="font-medium text-gray-800 dark:text-gray-100">{selectedItem.unit}</dd></div>
-                  <div className="flex items-start justify-between gap-4"><dt className="text-gray-500 dark:text-gray-400">Current Stock</dt><dd className="font-medium text-gray-800 dark:text-gray-100">{selectedItem.currentStock}</dd></div>
-                  <div className="flex items-start justify-between gap-4"><dt className="text-gray-500 dark:text-gray-400">Expiry Date</dt><dd className="font-medium text-gray-800 dark:text-gray-100">{formatDate(selectedItem.expiryDate)}</dd></div>
-                </dl>
-              </div>
-
               <div className="space-y-3">
-                <h4 className="font-semibold text-gray-800 dark:text-gray-100">Purchase History</h4>
                 {itemHistory.length === 0 ? (
                   renderEmptyState("No purchase history found for this item.")
                 ) : (
@@ -880,12 +1117,6 @@ export default function InventoryManagementClient({
           ) : (
             renderEmptyState("Select an item to inspect details.")
           )}
-
-          <div className="flex items-center justify-end">
-            <Button type="button" size="sm" variant="outline" onClick={closeItemDetailModal}>
-              Close
-            </Button>
-          </div>
         </div>
       </Modal>
     </section>
