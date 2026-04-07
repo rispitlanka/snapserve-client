@@ -3,7 +3,7 @@
 import MetricCard from "@/components/common/MetricCard";
 import { ArrowUpIcon, BoxCubeIcon, DollarLineIcon, GroupIcon, PieChartIcon } from "@/icons";
 import type { DashboardSummary } from "@/lib/auth";
-import { getAuthSession, listRestaurantAdmins, listRestaurants, ROLE_DASHBOARD_ROUTE } from "@/lib/auth";
+import { ROLE_DASHBOARD_ROUTE, getAuthSession, listRestaurantAdmins, listRestaurants } from "@/lib/auth";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -39,7 +39,7 @@ export default function SuperadminSummaryCards() {
     totalRestaurants: 0,
     totalRestaurantAdmins: 0,
     activeRestaurants: 0,
-    totalOwners: 0,
+    totalUsers: 0,
     newRestaurants: 0,
     monthlyRevenue: 0,
     activeSubscriptions: 0,
@@ -86,7 +86,7 @@ export default function SuperadminSummaryCards() {
           totalRestaurants: restaurants.length,
           totalRestaurantAdmins: admins.length,
           activeRestaurants: restaurants.filter((restaurant) => Boolean(restaurant.isActive)).length,
-          totalOwners: admins.length,
+          totalUsers: admins.length,
           newRestaurants,
           monthlyRevenue: restaurants.length * 5000,
           activeSubscriptions: Math.floor(restaurants.length * 0.85),
@@ -115,7 +115,7 @@ export default function SuperadminSummaryCards() {
           Superadmin Dashboard
         </h1>
         <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-          Overview of restaurants, owners, and subscription status.
+          Overview of restaurants, Users, and subscription status.
         </p>
       </div>
 
@@ -125,7 +125,6 @@ export default function SuperadminSummaryCards() {
         <MetricCard
           title="Total Restaurants"
           value={summary.totalRestaurants.toLocaleString()}
-          description="All restaurants registered in the system"
           icon={<BoxCubeIcon className="size-6 text-brand-600 dark:text-brand-400" />}
           accentClassName="bg-brand-50 dark:bg-brand-500/10"
           isLoading={isLoading}
@@ -133,15 +132,13 @@ export default function SuperadminSummaryCards() {
         <MetricCard
           title="Active Restaurants"
           value={summary.activeRestaurants.toLocaleString()}
-          description="Restaurants currently marked active"
           icon={<ArrowUpIcon className="size-6 text-success-600 dark:text-success-400" />}
           accentClassName="bg-success-50 dark:bg-success-500/10"
           isLoading={isLoading}
         />
         <MetricCard
-          title="Total Owners"
+          title="Total Users"
           value={summary.totalRestaurantAdmins.toLocaleString()}
-          description="Users managing restaurant accounts"
           icon={<GroupIcon className="size-6 text-info-600 dark:text-info-400" />}
           accentClassName="bg-info-50 dark:bg-info-500/10"
           isLoading={isLoading}
@@ -149,7 +146,6 @@ export default function SuperadminSummaryCards() {
         <MetricCard
           title="New Restaurants"
           value={summary.newRestaurants.toLocaleString()}
-          description="Recently added restaurants"
           icon={<BoxCubeIcon className="size-6 text-warning-600 dark:text-warning-400" />}
           accentClassName="bg-warning-50 dark:bg-warning-500/10"
           isLoading={isLoading}
@@ -162,7 +158,6 @@ export default function SuperadminSummaryCards() {
             minimumFractionDigits: 2,
             maximumFractionDigits: 2,
           }).format(summary.monthlyRevenue)}
-          description="Revenue tracking coming soon"
           icon={<DollarLineIcon className="size-6 text-success-600 dark:text-success-400" />}
           accentClassName="bg-success-50 dark:bg-success-500/10"
           isLoading={isLoading}
@@ -170,7 +165,6 @@ export default function SuperadminSummaryCards() {
         <MetricCard
           title="Active Subscriptions"
           value={summary.activeSubscriptions.toLocaleString()}
-          description="Currently active subscription plans"
           icon={<DollarLineIcon className="size-6 text-brand-600 dark:text-brand-400" />}
           accentClassName="bg-brand-50 dark:bg-brand-500/10"
           isLoading={isLoading}
@@ -178,7 +172,6 @@ export default function SuperadminSummaryCards() {
         <MetricCard
           title="Expired Subscriptions"
           value={summary.expiredSubscriptions.toLocaleString()}
-          description="Subscriptions past their expiry date"
           icon={<PieChartIcon className="size-6 text-error-600 dark:text-error-400" />}
           accentClassName="bg-error-50 dark:bg-error-500/10"
           isLoading={isLoading}
@@ -186,7 +179,6 @@ export default function SuperadminSummaryCards() {
         <MetricCard
           title="Pending Subscriptions"
           value={summary.pendingSubscriptions.toLocaleString()}
-          description="Awaiting approval or activation"
           icon={<GroupIcon className="size-6 text-warning-600 dark:text-warning-400" />}
           accentClassName="bg-warning-50 dark:bg-warning-500/10"
           isLoading={isLoading}

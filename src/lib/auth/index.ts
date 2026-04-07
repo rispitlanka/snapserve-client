@@ -5,6 +5,7 @@ export {
     createStaff,
     createSupplier,
     deleteStaff,
+    deleteRestaurantAdmin,
     listRegisters,
     listRestaurantAdmins,
     listRestaurants,
@@ -15,6 +16,7 @@ export {
     parseAuthSession,
     refreshSession,
     selectRegister,
+    updateRestaurantAdmin,
     updateStaff
 } from "./api";
 export { AUTH_API_BASE_URL, AUTH_STORAGE_KEY, ROLE_DASHBOARD_ROUTE } from "./constants";

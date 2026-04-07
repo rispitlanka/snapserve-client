@@ -38,7 +38,7 @@ export type DashboardSummary = {
   totalRestaurants: number;
   totalRestaurantAdmins: number;
   activeRestaurants: number;
-  totalOwners: number;
+  totalUsers: number;
   newRestaurants: number;
   monthlyRevenue: number;
   activeSubscriptions: number;

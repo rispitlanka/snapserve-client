@@ -456,7 +456,7 @@ export const listRestaurants = async (accessToken: string) => {
 
 export const createRestaurant = async (
   accessToken: string,
-  payload: { name: string; isActive: boolean }
+  payload: { id: string; name: string; mobileNumber: string; isActive: boolean }
 ) => {
   const response = await makeRequest(`${AUTH_API_BASE_URL}/restaurants`, {
     method: "POST",
@@ -471,14 +471,30 @@ export const createRestaurant = async (
   return (await response.json()) as unknown;
 };
 
+export type CreateRestaurantAdminPayload = {
+  restaurantId: string;
+  name: string;
+  password: string;
+};
+
+/**
+ * Creates a restaurant admin. `POST /users/admins` — body must match the DTO
+ * (only `restaurantId`, `name`, `password`; min password length enforced by API).
+ */
 export const createRestaurantAdmin = async (
   accessToken: string,
-  payload: { restaurantId: string; businessId?: string; name: string; password: string }
+  payload: CreateRestaurantAdminPayload
 ) => {
+  const body = {
+    restaurantId: payload.restaurantId.trim(),
+    name: payload.name.trim(),
+    password: payload.password,
+  };
+
   const response = await makeRequest(`${AUTH_API_BASE_URL}/users/admins`, {
     method: "POST",
     headers: getAuthHeaders(accessToken),
-    body: JSON.stringify(payload),
+    body: JSON.stringify(body),
   });
 
   if (!response.ok) {
@@ -499,6 +515,61 @@ export const listRestaurantAdmins = async (accessToken: string) => {
   }
 
   return (await response.json()) as unknown;
+};
+
+export type UpdateRestaurantAdminPayload = {
+  name?: string;
+  password?: string;
+};
+
+export const updateRestaurantAdmin = async (
+  accessToken: string,
+  adminId: string,
+  payload: UpdateRestaurantAdminPayload
+) => {
+  const body: Record<string, unknown> = {};
+  if (typeof payload.name === "string" && payload.name.trim()) {
+    body.name = payload.name.trim();
+  }
+  if (typeof payload.password === "string" && payload.password) {
+    body.password = payload.password;
+  }
+
+  const response = await makeRequest(
+    `${AUTH_API_BASE_URL}/users/admins/${encodeURIComponent(adminId)}`,
+    {
+      method: "PATCH",
+      headers: getAuthHeaders(accessToken),
+      body: JSON.stringify(body),
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(await parseApiError(response, "Failed to update restaurant admin."));
+  }
+
+  return (await response.json()) as unknown;
+};
+
+export const deleteRestaurantAdmin = async (accessToken: string, adminId: string) => {
+  const response = await makeRequest(
+    `${AUTH_API_BASE_URL}/users/admins/${encodeURIComponent(adminId)}`,
+    {
+      method: "DELETE",
+      headers: getAuthHeaders(accessToken),
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(await parseApiError(response, "Failed to delete restaurant admin."));
+  }
+
+  const contentType = response.headers.get("Content-Type") || "";
+  if (contentType.includes("application/json")) {
+    return (await response.json()) as unknown;
+  }
+
+  return { success: true };
 };
 
 export const changePassword = async (

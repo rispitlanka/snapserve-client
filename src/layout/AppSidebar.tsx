@@ -5,26 +5,26 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  useSyncExternalStore,
+    useCallback,
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
+    useSyncExternalStore,
 } from "react";
 import { useSidebar } from "../context/SidebarContext";
 import {
-  // BoxCubeIcon,
-  // CalenderIcon,
-  BoxCubeIcon,
-  BoxIconLine,
-  ChevronDownIcon,
-  DollarLineIcon,
-  GridIcon,
-  GroupIcon,
-  HorizontaLDots,
-  PieChartIcon,
-  UserIcon,
+    // BoxCubeIcon,
+    // CalenderIcon,
+    BoxCubeIcon,
+    BoxIconLine,
+    ChevronDownIcon,
+    DollarLineIcon,
+    GridIcon,
+    GroupIcon,
+    HorizontaLDots,
+    PieChartIcon,
+    UserIcon,
 } from "../icons/index";
 // import SidebarWidget from "./SidebarWidget";
 
@@ -52,7 +52,7 @@ const navItems: NavItem[] = [
   },
   {
     icon: <GroupIcon />,
-    name: "Owners",
+    name: "Users",
     path: "/manage-restaurant-admins",
     roles: ["superadmin"],
   },
@@ -68,7 +68,7 @@ const navItems: NavItem[] = [
     path: "/subscriptions",
     roles: ["superadmin"],
   },
-  
+
   // Admin Items
   {
     icon: <GridIcon />,
@@ -78,25 +78,25 @@ const navItems: NavItem[] = [
   },
   {
     icon: <UserIcon />,
-    name: "Manage Staffs",
+    name: "Staffs",
     path: "/manage-staff",
     roles: ["admin"],
   },
   {
     icon: <GroupIcon />,
-    name: "Manage Suppliers",
+    name: "Suppliers",
     path: "/manage-suppliers",
     roles: ["admin"],
   },
   {
     icon: <BoxIconLine />,
-    name: "Manage Inventory",
+    name: "Inventory",
     subItems: [
       { name: "Overview", path: "/manage-inventory" },
+      { name: "Items", path: "/manage-inventory-items" },
+      { name: "Brands", path: "/manage-inventory-brands" },
       { name: "Categories", path: "/manage-inventory-categories" },
       { name: "Sub-categories", path: "/manage-inventory-sub-categories" },
-      { name: "Brands", path: "/manage-inventory-brands" },
-      { name: "Items", path: "/manage-inventory-items" },
     ],
     roles: ["admin"],
   },
@@ -170,7 +170,7 @@ const navItems: NavItem[] = [
 // ];
 
 const AppSidebar: React.FC = () => {
-  const { isExpanded, isMobileOpen, isHovered, setIsHovered } = useSidebar();
+  const { isExpanded, isMobileOpen } = useSidebar();
   const pathname = usePathname();
 
   const subscribeToSession = useCallback(() => {
@@ -258,7 +258,7 @@ const AppSidebar: React.FC = () => {
                   ? "menu-item-active"
                   : "menu-item-inactive"
               } cursor-pointer ${
-                !isExpanded && !isHovered
+                !isExpanded && !isMobileOpen
                   ? "lg:justify-center"
                   : "lg:justify-start"
               }`}
@@ -273,10 +273,10 @@ const AppSidebar: React.FC = () => {
               >
                 {nav.icon}
               </span>
-              {(isExpanded || isHovered || isMobileOpen) && (
+              {(isExpanded || isMobileOpen) && (
                 <span className={`menu-item-text`}>{nav.name}</span>
               )}
-              {(isExpanded || isHovered || isMobileOpen) && (
+              {(isExpanded || isMobileOpen) && (
                 <ChevronDownIcon
                   className={`ml-auto w-5 h-5 transition-transform duration-200  ${
                     resolvedOpenSubmenu?.type === menuType &&
@@ -304,13 +304,13 @@ const AppSidebar: React.FC = () => {
                 >
                   {nav.icon}
                 </span>
-                {(isExpanded || isHovered || isMobileOpen) && (
+                {(isExpanded || isMobileOpen) && (
                   <span className={`menu-item-text`}>{nav.name}</span>
                 )}
               </Link>
             )
           )}
-          {nav.subItems && (isExpanded || isHovered || isMobileOpen) && (
+          {nav.subItems && (isExpanded || isMobileOpen) && (
             <div
               ref={(el) => {
                 subMenuRefs.current[`${menuType}-${index}`] = el;
@@ -427,25 +427,17 @@ const AppSidebar: React.FC = () => {
   return (
     <aside
       className={`fixed mt-16 flex flex-col lg:mt-0 top-0 px-5 left-0 bg-white dark:bg-gray-900 dark:border-gray-800 text-gray-900 h-screen transition-all duration-300 ease-in-out z-50 border-r border-gray-200 
-        ${
-          isExpanded || isMobileOpen
-            ? "w-[290px]"
-            : isHovered
-            ? "w-[290px]"
-            : "w-[90px]"
-        }
+        ${isExpanded || isMobileOpen ? "w-[290px]" : "w-[90px]"}
         ${isMobileOpen ? "translate-x-0" : "-translate-x-full"}
         lg:translate-x-0`}
-      onMouseEnter={() => !isExpanded && setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
     >
       <div
         className={`py-8 flex  ${
-          !isExpanded && !isHovered ? "lg:justify-center" : "justify-start"
+          !isExpanded && !isMobileOpen ? "lg:justify-center" : "justify-start"
         }`}
       >
         <Link href="/">
-          {isExpanded || isHovered || isMobileOpen ? (
+          {isExpanded || isMobileOpen ? (
             <div className="flex items-center gap-3">
               <Image
                 src="/images/logo/logo-icon.svg"
@@ -475,12 +467,12 @@ const AppSidebar: React.FC = () => {
             <div>
               <h2
                 className={`mb-4 text-xs uppercase flex leading-5 text-gray-400 ${
-                  !isExpanded && !isHovered
+                  !isExpanded && !isMobileOpen
                     ? "lg:justify-center"
                     : "justify-start"
                 }`}
               >
-                {isExpanded || isHovered || isMobileOpen ? (
+                {isExpanded || isMobileOpen ? (
                   "Menu"
                 ) : (
                   <HorizontaLDots />
@@ -492,12 +484,12 @@ const AppSidebar: React.FC = () => {
             {/* <div className="">
               <h2
                 className={`mb-4 text-xs uppercase flex leading-[20px] text-gray-400 ${
-                  !isExpanded && !isHovered
+                  !isExpanded && !isMobileOpen
                     ? "lg:justify-center"
                     : "justify-start"
                 }`}
               >
-                {isExpanded || isHovered || isMobileOpen ? (
+                {isExpanded || isMobileOpen ? (
                   "Others"
                 ) : (
                   <HorizontaLDots />
@@ -509,7 +501,7 @@ const AppSidebar: React.FC = () => {
         </nav>
         {showBottomProfileLink ? (
           <div className="mt-auto pb-6">
-            {isExpanded || isHovered || isMobileOpen ? (
+            {isExpanded || isMobileOpen ? (
               <Link
                 href="/profile"
                 className={`group block rounded-2xl border p-3 transition-all ${
@@ -561,7 +553,7 @@ const AppSidebar: React.FC = () => {
             )}
           </div>
         ) : null}
-        {/* {isExpanded || isHovered || isMobileOpen ? <SidebarWidget /> : null} */}
+        {/* {isExpanded || isMobileOpen ? <SidebarWidget /> : null} */}
       </div>
     </aside>
   );

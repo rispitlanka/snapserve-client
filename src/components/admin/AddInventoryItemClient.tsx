@@ -371,7 +371,7 @@ export default function AddInventoryItemClient() {
         </div>
       </div>
 
-      <div className="mx-auto w-full max-w-4xl">
+      <div className="w-full">
         {itemError ? (
           <p className="mb-4 text-sm text-error-500">{itemError}</p>
         ) : null}
@@ -395,10 +395,10 @@ export default function AddInventoryItemClient() {
             />
           </div>
 
-          <div className="grid grid-cols-1 gap-5 md:grid-cols-2 md:gap-6">
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-2 md:gap-6 xl:grid-cols-3">
             <div>
               <div className="mb-2 flex items-center justify-between gap-2">
-                <Label htmlFor="item-category" className="mb-0 text-sm font-medium text-slate-200">Category</Label>
+                <Label htmlFor="item-category" className="mb-0 text-sm font-medium text-gray-700 dark:text-gray-300">Category</Label>
                 <button
                   type="button"
                   onClick={openCategoryModal}
@@ -429,7 +429,7 @@ export default function AddInventoryItemClient() {
 
             <div>
               <div className="mb-2 flex items-center justify-between gap-2">
-                <Label htmlFor="item-sub-category" className="mb-0 text-sm font-medium text-slate-200">Sub-category</Label>
+                <Label htmlFor="item-sub-category" className="mb-0 text-sm font-medium text-gray-700 dark:text-gray-300">Sub-category</Label>
                 <button
                   type="button"
                   onClick={openSubCategoryModal}
@@ -453,12 +453,10 @@ export default function AddInventoryItemClient() {
                 </select>
               </div>
             </div>
-          </div>
 
-          <div className="grid grid-cols-1 gap-5 md:grid-cols-2 md:gap-6">
             <div>
               <div className="mb-2 flex items-center justify-between gap-2">
-                <Label htmlFor="item-brand" className="mb-0 text-sm font-medium text-slate-200">Brand</Label>
+                <Label htmlFor="item-brand" className="mb-0 text-sm font-medium text-gray-700 dark:text-gray-300">Brand</Label>
                 <button
                   type="button"
                   onClick={openBrandModal}
@@ -482,7 +480,9 @@ export default function AddInventoryItemClient() {
                 </select>
               </div>
             </div>
+          </div>
 
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-2 md:gap-6">
             <div>
               <Label htmlFor="item-unit" className={fieldLabelClass}>Unit</Label>
               <select
