@@ -7,5 +7,5 @@ export const metadata: Metadata = {
 };
 
 export default function ManageRestaurantAdminsPage() {
-  return <SuperadminDashboardClient defaultActiveTab="admins" showTabSwitcher={false} pageType="owners" />;
+  return <SuperadminDashboardClient defaultActiveTab="admins" showTabSwitcher={false} pageType="Users" />;
 }

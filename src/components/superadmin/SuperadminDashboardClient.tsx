@@ -1,5 +1,6 @@
 "use client";
 
+import ClientTablePagination from "@/components/common/ClientTablePagination";
 import { Modal } from "@/components/ui/modal";
 import {
   createRestaurant,
@@ -8,6 +9,7 @@ import {
   listRestaurantAdmins,
   listRestaurants,
 } from "@/lib/auth";
+import { useClientPagedSlice } from "@/lib/pagination/clientPaging";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 
@@ -29,7 +31,7 @@ type ManagementTab = "restaurants" | "admins";
 type SuperadminDashboardClientProps = {
   defaultActiveTab?: ManagementTab;
   showTabSwitcher?: boolean;
-  pageType?: "owners" | "admins";
+  pageType?: "Users" | "admins";
 };
 
 export default function SuperadminDashboardClient({
@@ -55,6 +57,10 @@ export default function SuperadminDashboardClient({
   const [createdAdmins, setCreatedAdmins] = useState<CreatedAdmin[]>([]);
   const [loading, setLoading] = useState(false);
   const [adminLoading, setAdminLoading] = useState(false);
+  const [restaurantPage, setRestaurantPage] = useState(1);
+  const [restaurantPageSize, setRestaurantPageSize] = useState(10);
+  const [adminPage, setAdminPage] = useState(1);
+  const [adminPageSize, setAdminPageSize] = useState(10);
 
   const isValidAdminName = (value: string) => {
     const trimmed = value.trim();
@@ -266,6 +272,34 @@ export default function SuperadminDashboardClient({
     });
   }, [createdAdmins, adminSearch, restaurants]);
 
+  const restaurantPaged = useClientPagedSlice(
+    filteredRestaurants,
+    restaurantPage,
+    restaurantPageSize
+  );
+
+  const adminPaged = useClientPagedSlice(filteredAdmins, adminPage, adminPageSize);
+
+  useEffect(() => {
+    setRestaurantPage(1);
+  }, [restaurantSearch]);
+
+  useEffect(() => {
+    setAdminPage(1);
+  }, [adminSearch]);
+
+  useEffect(() => {
+    if (restaurantPaged.safePage !== restaurantPage) {
+      setRestaurantPage(restaurantPaged.safePage);
+    }
+  }, [restaurantPaged.safePage, restaurantPage]);
+
+  useEffect(() => {
+    if (adminPaged.safePage !== adminPage) {
+      setAdminPage(adminPaged.safePage);
+    }
+  }, [adminPaged.safePage, adminPage]);
+
   const pageTitle = activeTab === "admins" ? "Manage Restaurent Admin" : "Manage Restaurent";
 
   return (
@@ -328,7 +362,7 @@ export default function SuperadminDashboardClient({
                 className="h-10 w-full rounded-lg border border-gray-300 bg-transparent px-3 text-sm text-gray-800 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 md:max-w-sm"
               />
             </div>
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto transition-opacity duration-200">
               <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                 <thead>
                   <tr className="text-left text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400">
@@ -352,7 +386,7 @@ export default function SuperadminDashboardClient({
                       </td>
                     </tr>
                   ) : (
-                    filteredRestaurants.map((restaurant) => (
+                    restaurantPaged.slice.map((restaurant) => (
                       <tr key={restaurant.id}>
                         <td className="px-3 py-3 text-sm text-gray-800 dark:text-gray-100">
                           {restaurant.name}
@@ -397,6 +431,23 @@ export default function SuperadminDashboardClient({
                 </tbody>
               </table>
             </div>
+
+            {!loading ? (
+              <ClientTablePagination
+                page={restaurantPaged.safePage}
+                totalPages={restaurantPaged.totalPages}
+                totalItems={restaurantPaged.total}
+                pageSize={restaurantPageSize}
+                rangeFrom={restaurantPaged.rangeFrom}
+                rangeTo={restaurantPaged.rangeTo}
+                onPageChange={setRestaurantPage}
+                onPageSizeChange={(size) => {
+                  setRestaurantPageSize(size);
+                  setRestaurantPage(1);
+                }}
+                disabled={loading}
+              />
+            ) : null}
           </div>
         </section>
       ) : null}
@@ -409,7 +460,7 @@ export default function SuperadminDashboardClient({
               onClick={openAdminModal}
               className="inline-flex items-center justify-center rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600"
             >
-              {pageType === "owners" ? "Add Owner" : "Add Restaurant Admin"}
+              {pageType === "Users" ? "Add User" : "Add Restaurant Admin"}
             </button>
           </div>
 
@@ -423,7 +474,7 @@ export default function SuperadminDashboardClient({
                 className="h-10 w-full rounded-lg border border-gray-300 bg-transparent px-3 text-sm text-gray-800 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 md:max-w-sm"
               />
             </div>
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto transition-opacity duration-200">
               <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                 <thead>
                   <tr className="text-left text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400">
@@ -447,7 +498,7 @@ export default function SuperadminDashboardClient({
                       </td>
                     </tr>
                   ) : (
-                    filteredAdmins.map((admin) => (
+                    adminPaged.slice.map((admin) => (
                       <tr key={admin.id}>
                         <td className="px-3 py-3 text-sm text-gray-800 dark:text-gray-100">
                           {admin.name}
@@ -484,6 +535,23 @@ export default function SuperadminDashboardClient({
                 </tbody>
               </table>
             </div>
+
+            {!adminLoading ? (
+              <ClientTablePagination
+                page={adminPaged.safePage}
+                totalPages={adminPaged.totalPages}
+                totalItems={adminPaged.total}
+                pageSize={adminPageSize}
+                rangeFrom={adminPaged.rangeFrom}
+                rangeTo={adminPaged.rangeTo}
+                onPageChange={setAdminPage}
+                onPageSizeChange={(size) => {
+                  setAdminPageSize(size);
+                  setAdminPage(1);
+                }}
+                disabled={adminLoading}
+              />
+            ) : null}
           </div>
         </section>
       ) : null}

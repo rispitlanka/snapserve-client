@@ -4,7 +4,7 @@ import React from "react";
 type MetricCardProps = {
   title: string;
   value: string;
-  description: string;
+  description?: string;
   icon: React.ReactNode;
   accentClassName: string;
   isLoading?: boolean;
@@ -37,7 +37,9 @@ export default function MetricCard({
             </h4>
           )}
         </div>
-        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{description}</p>
+        {description ? (
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{description}</p>
+        ) : null}
       </div>
     </div>
   );

@@ -1,5 +1,6 @@
 "use client";
 
+import ClientTablePagination from "@/components/common/ClientTablePagination";
 import type { Staff, Supplier } from "@/lib/auth";
 import {
   createStaff,
@@ -11,6 +12,7 @@ import {
   ROLE_DASHBOARD_ROUTE,
   updateStaff,
 } from "@/lib/auth";
+import { useClientPagedSlice } from "@/lib/pagination/clientPaging";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
@@ -77,6 +79,10 @@ export default function RestaurantAdminManagementClient({
   const [updatingStaffId, setUpdatingStaffId] = useState<string | null>(null);
   const [staffForm, setStaffForm] = useState<StaffFormState>(emptyStaffForm);
   const [supplierForm, setSupplierForm] = useState<SupplierFormState>(emptySupplierForm);
+  const [staffPage, setStaffPage] = useState(1);
+  const [staffPageSize, setStaffPageSize] = useState(10);
+  const [supplierPage, setSupplierPage] = useState(1);
+  const [supplierPageSize, setSupplierPageSize] = useState(10);
 
   useEffect(() => {
     const initialize = async () => {
@@ -202,6 +208,29 @@ export default function RestaurantAdminManagementClient({
       return searchable.toLowerCase().includes(query);
     });
   }, [suppliers, supplierSearch]);
+
+  const staffPaged = useClientPagedSlice(staffFiltered, staffPage, staffPageSize);
+  const supplierPaged = useClientPagedSlice(supplierFiltered, supplierPage, supplierPageSize);
+
+  useEffect(() => {
+    setStaffPage(1);
+  }, [staffSearch]);
+
+  useEffect(() => {
+    setSupplierPage(1);
+  }, [supplierSearch]);
+
+  useEffect(() => {
+    if (staffPaged.safePage !== staffPage) {
+      setStaffPage(staffPaged.safePage);
+    }
+  }, [staffPaged.safePage, staffPage]);
+
+  useEffect(() => {
+    if (supplierPaged.safePage !== supplierPage) {
+      setSupplierPage(supplierPaged.safePage);
+    }
+  }, [supplierPaged.safePage, supplierPage]);
 
   const handleStaffSave = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -460,7 +489,7 @@ export default function RestaurantAdminManagementClient({
                       </td>
                     </tr>
                   ) : (
-                    staffFiltered.map((record) => (
+                    staffPaged.slice.map((record) => (
                       <tr key={record.id}>
                         <td className="px-3 py-3 text-sm text-gray-800 dark:text-gray-100">
                           {record.name}
@@ -523,6 +552,23 @@ export default function RestaurantAdminManagementClient({
                 </tbody>
               </table>
             </div>
+
+            {!isLoadingStaff ? (
+              <ClientTablePagination
+                page={staffPaged.safePage}
+                totalPages={staffPaged.totalPages}
+                totalItems={staffPaged.total}
+                pageSize={staffPageSize}
+                rangeFrom={staffPaged.rangeFrom}
+                rangeTo={staffPaged.rangeTo}
+                onPageChange={setStaffPage}
+                onPageSizeChange={(size) => {
+                  setStaffPageSize(size);
+                  setStaffPage(1);
+                }}
+                disabled={isLoadingStaff}
+              />
+            ) : null}
           </div>
         </section>
       ) : null}
@@ -576,7 +622,7 @@ export default function RestaurantAdminManagementClient({
                       </td>
                     </tr>
                   ) : (
-                    supplierFiltered.map((record) => (
+                    supplierPaged.slice.map((record) => (
                       <tr key={record.id}>
                         <td className="px-3 py-3 text-sm text-gray-800 dark:text-gray-100">
                           {record.name}
@@ -593,6 +639,23 @@ export default function RestaurantAdminManagementClient({
                 </tbody>
               </table>
             </div>
+
+            {!isLoadingSuppliers ? (
+              <ClientTablePagination
+                page={supplierPaged.safePage}
+                totalPages={supplierPaged.totalPages}
+                totalItems={supplierPaged.total}
+                pageSize={supplierPageSize}
+                rangeFrom={supplierPaged.rangeFrom}
+                rangeTo={supplierPaged.rangeTo}
+                onPageChange={setSupplierPage}
+                onPageSizeChange={(size) => {
+                  setSupplierPageSize(size);
+                  setSupplierPage(1);
+                }}
+                disabled={isLoadingSuppliers}
+              />
+            ) : null}
           </div>
         </section>
       ) : null}

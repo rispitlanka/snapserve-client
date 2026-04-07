@@ -1,5 +1,6 @@
 "use client";
 
+import ClientTablePagination from "@/components/common/ClientTablePagination";
 import MetricCard from "@/components/common/MetricCard";
 import Input from "@/components/form/input/InputField";
 import Label from "@/components/form/Label";
@@ -26,6 +27,7 @@ import {
   listInventoryItems,
   listInventorySubCategories
 } from "@/lib/inventory";
+import { useClientPagedSlice } from "@/lib/pagination/clientPaging";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
@@ -88,6 +90,17 @@ export default function InventoryManagementClient({
   const [categorySuccess, setCategorySuccess] = useState("");
   const [subCategorySuccess, setSubCategorySuccess] = useState("");
   const [brandSuccess, setBrandSuccess] = useState("");
+
+  const [categoryPage, setCategoryPage] = useState(1);
+  const [categoryPageSize, setCategoryPageSize] = useState(10);
+  const [subCategoryPage, setSubCategoryPage] = useState(1);
+  const [subCategoryPageSize, setSubCategoryPageSize] = useState(10);
+  const [brandPage, setBrandPage] = useState(1);
+  const [brandPageSize, setBrandPageSize] = useState(10);
+  const [itemPage, setItemPage] = useState(1);
+  const [itemPageSize, setItemPageSize] = useState(10);
+  const [historyPage, setHistoryPage] = useState(1);
+  const [historyPageSize, setHistoryPageSize] = useState(10);
 
   const getScopedAdminSession = useCallback(() => {
     const session = getAuthSession();
@@ -203,6 +216,36 @@ export default function InventoryManagementClient({
       return accumulator;
     }, {});
   }, [categories]);
+
+  const categoryPaged = useClientPagedSlice(categories, categoryPage, categoryPageSize);
+  const subCategoryPaged = useClientPagedSlice(subCategories, subCategoryPage, subCategoryPageSize);
+  const brandPaged = useClientPagedSlice(brands, brandPage, brandPageSize);
+  const itemPaged = useClientPagedSlice(items, itemPage, itemPageSize);
+  const historyPaged = useClientPagedSlice(itemHistory, historyPage, historyPageSize);
+
+  useEffect(() => {
+    if (categoryPaged.safePage !== categoryPage) setCategoryPage(categoryPaged.safePage);
+  }, [categoryPaged.safePage, categoryPage]);
+
+  useEffect(() => {
+    if (subCategoryPaged.safePage !== subCategoryPage) setSubCategoryPage(subCategoryPaged.safePage);
+  }, [subCategoryPaged.safePage, subCategoryPage]);
+
+  useEffect(() => {
+    if (brandPaged.safePage !== brandPage) setBrandPage(brandPaged.safePage);
+  }, [brandPaged.safePage, brandPage]);
+
+  useEffect(() => {
+    if (itemPaged.safePage !== itemPage) setItemPage(itemPaged.safePage);
+  }, [itemPaged.safePage, itemPage]);
+
+  useEffect(() => {
+    if (historyPaged.safePage !== historyPage) setHistoryPage(historyPaged.safePage);
+  }, [historyPaged.safePage, historyPage]);
+
+  useEffect(() => {
+    setHistoryPage(1);
+  }, [selectedItemId]);
 
   const renderEmptyState = (message: string) => (
     <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50 p-6 text-sm text-gray-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-400">
@@ -459,7 +502,7 @@ export default function InventoryManagementClient({
                   </TableRow>
                 </TableHeader>
                 <TableBody className="divide-y divide-gray-100 dark:divide-gray-800">
-                  {categories.map((category) => (
+                  {categoryPaged.slice.map((category) => (
                     <TableRow key={category.id} className="bg-white dark:bg-transparent">
                       <TableCell className="px-4 py-3 text-sm text-gray-800 dark:text-gray-100">{category.name}</TableCell>
                       <TableCell className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">{category.restaurantId}</TableCell>
@@ -468,6 +511,20 @@ export default function InventoryManagementClient({
                   ))}
                 </TableBody>
               </Table>
+              <ClientTablePagination
+                page={categoryPaged.safePage}
+                totalPages={categoryPaged.totalPages}
+                totalItems={categoryPaged.total}
+                pageSize={categoryPageSize}
+                rangeFrom={categoryPaged.rangeFrom}
+                rangeTo={categoryPaged.rangeTo}
+                onPageChange={setCategoryPage}
+                onPageSizeChange={(size) => {
+                  setCategoryPageSize(size);
+                  setCategoryPage(1);
+                }}
+                disabled={isLoading}
+              />
             </div>
           )}
         </div>
@@ -503,7 +560,7 @@ export default function InventoryManagementClient({
                   </TableRow>
                 </TableHeader>
                 <TableBody className="divide-y divide-gray-100 dark:divide-gray-800">
-                  {subCategories.map((subCategory) => (
+                  {subCategoryPaged.slice.map((subCategory) => (
                     <TableRow key={subCategory.id} className="bg-white dark:bg-transparent">
                       <TableCell className="px-4 py-3 text-sm text-gray-800 dark:text-gray-100">{subCategory.name}</TableCell>
                       <TableCell className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
@@ -514,6 +571,20 @@ export default function InventoryManagementClient({
                   ))}
                 </TableBody>
               </Table>
+              <ClientTablePagination
+                page={subCategoryPaged.safePage}
+                totalPages={subCategoryPaged.totalPages}
+                totalItems={subCategoryPaged.total}
+                pageSize={subCategoryPageSize}
+                rangeFrom={subCategoryPaged.rangeFrom}
+                rangeTo={subCategoryPaged.rangeTo}
+                onPageChange={setSubCategoryPage}
+                onPageSizeChange={(size) => {
+                  setSubCategoryPageSize(size);
+                  setSubCategoryPage(1);
+                }}
+                disabled={isLoading}
+              />
             </div>
           )}
         </div>
@@ -548,7 +619,7 @@ export default function InventoryManagementClient({
                   </TableRow>
                 </TableHeader>
                 <TableBody className="divide-y divide-gray-100 dark:divide-gray-800">
-                  {brands.map((brand) => (
+                  {brandPaged.slice.map((brand) => (
                     <TableRow key={brand.id} className="bg-white dark:bg-transparent">
                       <TableCell className="px-4 py-3 text-sm text-gray-800 dark:text-gray-100">{brand.name}</TableCell>
                       <TableCell className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">{brand.restaurantId}</TableCell>
@@ -557,6 +628,20 @@ export default function InventoryManagementClient({
                   ))}
                 </TableBody>
               </Table>
+              <ClientTablePagination
+                page={brandPaged.safePage}
+                totalPages={brandPaged.totalPages}
+                totalItems={brandPaged.total}
+                pageSize={brandPageSize}
+                rangeFrom={brandPaged.rangeFrom}
+                rangeTo={brandPaged.rangeTo}
+                onPageChange={setBrandPage}
+                onPageSizeChange={(size) => {
+                  setBrandPageSize(size);
+                  setBrandPage(1);
+                }}
+                disabled={isLoading}
+              />
             </div>
           )}
         </div>
@@ -593,7 +678,7 @@ export default function InventoryManagementClient({
                     </TableRow>
                   </TableHeader>
                   <TableBody className="divide-y divide-gray-100 dark:divide-gray-800">
-                    {items.map((item) => (
+                    {itemPaged.slice.map((item) => (
                       <TableRow
                         key={item.id}
                         className="cursor-pointer bg-white transition-colors hover:bg-gray-50 dark:bg-transparent dark:hover:bg-gray-900/60"
@@ -610,6 +695,20 @@ export default function InventoryManagementClient({
                     ))}
                   </TableBody>
                 </Table>
+                <ClientTablePagination
+                  page={itemPaged.safePage}
+                  totalPages={itemPaged.totalPages}
+                  totalItems={itemPaged.total}
+                  pageSize={itemPageSize}
+                  rangeFrom={itemPaged.rangeFrom}
+                  rangeTo={itemPaged.rangeTo}
+                  onPageChange={setItemPage}
+                  onPageSizeChange={(size) => {
+                    setItemPageSize(size);
+                    setItemPage(1);
+                  }}
+                  disabled={isLoading}
+                />
               </div>
 
             )}
@@ -761,7 +860,7 @@ export default function InventoryManagementClient({
                         </TableRow>
                       </TableHeader>
                       <TableBody className="divide-y divide-gray-100 dark:divide-gray-800">
-                        {itemHistory.map((entry, index) => (
+                        {historyPaged.slice.map((entry, index) => (
                           <TableRow key={entry.id ?? `${entry.date}-${index}`} className="bg-white dark:bg-transparent">
                             <TableCell className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">{formatDate(entry.date)}</TableCell>
                             <TableCell className="px-4 py-3 text-sm text-gray-800 dark:text-gray-100">{entry.description || "History entry"}</TableCell>
@@ -771,6 +870,21 @@ export default function InventoryManagementClient({
                         ))}
                       </TableBody>
                     </Table>
+                    <ClientTablePagination
+                      page={historyPaged.safePage}
+                      totalPages={historyPaged.totalPages}
+                      totalItems={historyPaged.total}
+                      pageSize={historyPageSize}
+                      rangeFrom={historyPaged.rangeFrom}
+                      rangeTo={historyPaged.rangeTo}
+                      onPageChange={setHistoryPage}
+                      onPageSizeChange={(size) => {
+                        setHistoryPageSize(size);
+                        setHistoryPage(1);
+                      }}
+                      disabled={isItemDetailLoading}
+                      className="border-t-0 pt-3"
+                    />
                   </div>
                 )}
               </div>

@@ -1,13 +1,17 @@
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHeader,
-    TableRow,
-} from "../ui/table";
+"use client";
 
+import ClientTablePagination from "@/components/common/ClientTablePagination";
+import { useClientPagedSlice } from "@/lib/pagination/clientPaging";
 import Image from "next/image";
+import { useEffect, useState } from "react";
 import Badge from "../ui/badge/Badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHeader,
+  TableRow,
+} from "../ui/table";
 
 interface Order {
   id: number;
@@ -111,6 +115,14 @@ const tableData: Order[] = [
 ];
 
 export default function BasicTableOne() {
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(2);
+  const paged = useClientPagedSlice(tableData, page, pageSize);
+
+  useEffect(() => {
+    if (paged.safePage !== page) setPage(paged.safePage);
+  }, [paged.safePage, page]);
+
   return (
     <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/3">
       <div className="max-w-full overflow-x-auto">
@@ -154,7 +166,7 @@ export default function BasicTableOne() {
 
             {/* Table Body */}
             <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
-              {tableData.map((order) => (
+              {paged.slice.map((order) => (
                 <TableRow key={order.id}>
                   <TableCell className="px-5 py-4 sm:px-6 text-start">
                     <div className="flex items-center gap-3">
@@ -220,6 +232,19 @@ export default function BasicTableOne() {
           </Table>
         </div>
       </div>
+      <ClientTablePagination
+        page={paged.safePage}
+        totalPages={paged.totalPages}
+        totalItems={paged.total}
+        pageSize={pageSize}
+        rangeFrom={paged.rangeFrom}
+        rangeTo={paged.rangeTo}
+        onPageChange={setPage}
+        onPageSizeChange={(size) => {
+          setPageSize(size);
+          setPage(1);
+        }}
+      />
     </div>
   );
 }
