@@ -3,7 +3,6 @@ import ChangePasswordCard from "@/components/user-profile/ChangePasswordCard";
 // import UserInfoCard from "@/components/user-profile/UserInfoCard";
 import UserMetaCard from "@/components/user-profile/UserMetaCard";
 import { Metadata } from "next";
-import Link from "next/link";
 
 export const metadata: Metadata = {
   title: "Next.js Profile | SnapServe - Next.js Dashboard Template",
@@ -23,14 +22,6 @@ export default function Profile() {
           {/* <UserInfoCard /> */}
           {/* <UserAddressCard /> */}
           <ChangePasswordCard />
-        </div>
-        <div className="mt-6 flex items-end justify-start">
-          <Link
-            href="/profile"
-            className="inline-flex items-center justify-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-800"
-          >
-            Profile
-          </Link>
         </div>
       </div>
     </div>

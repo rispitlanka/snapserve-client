@@ -406,22 +406,33 @@ export default function RestaurantAdminManagementClient({
     : activeTab === "staff"
       ? "Manage Staff"
       : "Manage Suppliers";
-
-  const pageDescription = showTabSwitcher
-    ? "Manage staff and suppliers for your restaurant."
-    : activeTab === "staff"
-      ? "Add staff members and toggle their active status."
-      : "Create and manage suppliers for your restaurant.";
+  const headerAction = !showTabSwitcher
+    ? activeTab === "staff"
+      ? {
+          label: "Add Staff",
+          onClick: openStaffModal,
+        }
+      : {
+          label: "Add Supplier",
+          onClick: openSupplierModal,
+        }
+    : null;
 
   return (
     <div className="space-y-6 rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/3">
-      <div>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-semibold text-gray-800 dark:text-white/90">
           {pageHeading}
         </h1>
-        <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-          {pageDescription}
-        </p>
+        {headerAction ? (
+          <button
+            type="button"
+            onClick={headerAction.onClick}
+            className="inline-flex items-center justify-center rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600"
+          >
+            {headerAction.label}
+          </button>
+        ) : null}
       </div>
 
       {showTabSwitcher ? (
@@ -453,15 +464,17 @@ export default function RestaurantAdminManagementClient({
 
       {activeTab === "staff" ? (
         <section className="space-y-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <button
-              type="button"
-              onClick={openStaffModal}
-              className="inline-flex items-center justify-center rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600"
-            >
-              Add Staff
-            </button>
-          </div>
+          {showTabSwitcher ? (
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
+              <button
+                type="button"
+                onClick={openStaffModal}
+                className="inline-flex items-center justify-center rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600"
+              >
+                Add Staff
+              </button>
+            </div>
+          ) : null}
 
           {staffError ? <p className="text-sm text-error-500">{staffError}</p> : null}
           {staffSuccess ? <p className="text-sm text-success-600 dark:text-success-400">{staffSuccess}</p> : null}
@@ -578,17 +591,17 @@ export default function RestaurantAdminManagementClient({
 
       {activeTab === "suppliers" ? (
         <section className="space-y-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
+          {showTabSwitcher ? (
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
+              <button
+                type="button"
+                onClick={openSupplierModal}
+                className="inline-flex items-center justify-center rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600"
+              >
+                Add Supplier
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={openSupplierModal}
-              className="inline-flex items-center justify-center rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600"
-            >
-              Add Supplier
-            </button>
-          </div>
+          ) : null}
 
           {supplierError ? <p className="text-sm text-error-500">{supplierError}</p> : null}
           {supplierSuccess ? <p className="text-sm text-success-600 dark:text-success-400">{supplierSuccess}</p> : null}

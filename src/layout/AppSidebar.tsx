@@ -19,6 +19,7 @@ import {
     BoxCubeIcon,
     BoxIconLine,
     ChevronDownIcon,
+    DocsIcon,
     DollarLineIcon,
     GridIcon,
     GroupIcon,
@@ -100,7 +101,17 @@ const navItems: NavItem[] = [
     ],
     roles: ["admin"],
   },
-  
+  {
+    icon: <DocsIcon />,
+    name: "Purchases",
+    subItems: [
+      { name: "Summary", path: "/manage-purchases/summary" },
+      { name: "Invoice", path: "/manage-purchases/invoice" },
+      { name: "Settlement", path: "/manage-purchases/settlement" },
+    ],
+    roles: ["admin"],
+  },
+
   // Cashier Items
   {
     icon: <GridIcon />,

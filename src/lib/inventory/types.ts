@@ -73,3 +73,8 @@ export type CreateInventoryItemPayload = {
   unit: string;
   expiryDate: string;
 };
+
+/** PATCH body for setting on-hand quantity (backend may expect number or string). */
+export type UpdateInventoryItemStockPayload = {
+  currentStock: number;
+};

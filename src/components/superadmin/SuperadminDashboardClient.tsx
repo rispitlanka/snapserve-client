@@ -9,6 +9,7 @@ import {
   getAuthSession,
   listRestaurantAdmins,
   listRestaurants,
+  updateRestaurant,
   updateRestaurantAdmin,
 } from "@/lib/auth";
 import { useClientPagedSlice } from "@/lib/pagination/clientPaging";
@@ -19,6 +20,7 @@ type Restaurant = {
   id: string;
   restaurantId: string;
   name: string;
+  mobileNumber: string;
   isActive: boolean;
 };
 
@@ -68,6 +70,7 @@ export default function SuperadminDashboardClient({
   const [adminLoading, setAdminLoading] = useState(false);
   const [restaurantPage, setRestaurantPage] = useState(1);
   const [restaurantPageSize, setRestaurantPageSize] = useState(10);
+  const [updatingRestaurantKey, setUpdatingRestaurantKey] = useState<string | null>(null);
   const [adminPage, setAdminPage] = useState(1);
   const [adminPageSize, setAdminPageSize] = useState(10);
 
@@ -153,6 +156,9 @@ export default function SuperadminDashboardClient({
           (item.id as string) ||
           `RST${String(index + 1).padStart(3, "0")}`,
         name: (item.name as string) || "Restaurant",
+        mobileNumber: String(
+          item.mobileNumber ?? item.mobile_number ?? item.mobile ?? ""
+        ).trim(),
         isActive: Boolean(item.isActive),
       }));
 
@@ -196,6 +202,37 @@ export default function SuperadminDashboardClient({
       setAdminError("Failed to load restaurant admins.");
     } finally {
       setAdminLoading(false);
+    }
+  };
+
+  const handleToggleRestaurantActive = async (restaurant: Restaurant, nextActive: boolean) => {
+    const key = `${restaurant.id}:${restaurant.restaurantId}`;
+    if (updatingRestaurantKey === key) return;
+
+    setUpdatingRestaurantKey(key);
+    try {
+      const session = getAuthSession();
+      if (!session) throw new Error("Session not found");
+
+      await updateRestaurant(session.accessToken, restaurant.restaurantId, {
+        name: restaurant.name,
+        mobileNumber: restaurant.mobileNumber || "",
+        isActive: nextActive,
+      });
+
+      setRestaurants((prev) =>
+        prev.map((r) =>
+          r.id === restaurant.id && r.restaurantId === restaurant.restaurantId
+            ? { ...r, isActive: nextActive }
+            : r
+        )
+      );
+      toast.success(nextActive ? "Restaurant activated." : "Restaurant set to inactive.");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to update restaurant.";
+      toast.error(message);
+    } finally {
+      setUpdatingRestaurantKey(null);
     }
   };
 
@@ -402,10 +439,23 @@ export default function SuperadminDashboardClient({
   }, [adminPaged.safePage, adminPage]);
 
   const pageTitle = activeTab === "admins" ? "Manage Restaurent Admin" : "Manage Restaurent";
+  const headerActionLabel = activeTab === "admins"
+    ? (pageType === "Users" ? "Add User" : "Add Restaurant Admin")
+    : "Add Restaurant";
+  const handleHeaderAction = activeTab === "admins" ? openAdminModal : openRestaurantModal;
 
   return (
     <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/3">
-      <h1 className="text-2xl font-semibold text-gray-800 dark:text-white/90">{pageTitle}</h1>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <h1 className="text-2xl font-semibold text-gray-800 dark:text-white/90">{pageTitle}</h1>
+        <button
+          type="button"
+          onClick={handleHeaderAction}
+          className="inline-flex items-center justify-center rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600"
+        >
+          {headerActionLabel}
+        </button>
+      </div>
       {error ? <p className="mt-2 text-sm text-error-500">{error}</p> : null}
       {adminError ? <p className="mt-2 text-sm text-error-500">{adminError}</p> : null}
       {adminSuccess ? (
@@ -441,18 +491,6 @@ export default function SuperadminDashboardClient({
 
       {activeTab === "restaurants" ? (
         <section className="mt-6 space-y-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <h2 className="text-lg font-semibold text-gray-800 dark:text-white/90">
-            </h2>
-            <button
-              type="button"
-              onClick={openRestaurantModal}
-              className="inline-flex items-center justify-center rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600"
-            >
-              Add Restaurant
-            </button>
-          </div>
-
           <div className="rounded-xl border border-gray-200 p-4 dark:border-gray-800">
             <div className="mb-4">
               <input
@@ -495,15 +533,46 @@ export default function SuperadminDashboardClient({
                           {restaurant.restaurantId}
                         </td>
                         <td className="px-3 py-3 text-sm">
-                          <span
-                            className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                              restaurant.isActive
-                                ? "bg-success-50 text-success-700 dark:bg-success-500/10 dark:text-success-400"
-                                : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300"
-                            }`}
-                          >
-                            {restaurant.isActive ? "Active" : "Inactive"}
-                          </span>
+                          <div className="flex flex-wrap items-center gap-3">
+                            <span
+                              className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                                restaurant.isActive
+                                  ? "bg-success-50 text-success-700 dark:bg-success-500/10 dark:text-success-400"
+                                  : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300"
+                              }`}
+                            >
+                              {restaurant.isActive ? "Active" : "Inactive"}
+                            </span>
+                            <label className="inline-flex cursor-pointer items-center gap-2">
+                              <input
+                                type="checkbox"
+                                className="peer sr-only"
+                                checked={restaurant.isActive}
+                                disabled={
+                                  updatingRestaurantKey === `${restaurant.id}:${restaurant.restaurantId}`
+                                }
+                                onChange={(event) =>
+                                  void handleToggleRestaurantActive(restaurant, event.target.checked)
+                                }
+                              />
+                              <span
+                                className={`relative inline-block h-6 w-11 shrink-0 rounded-full transition-colors duration-200 ease-in-out peer-focus-visible:ring-2 peer-focus-visible:ring-brand-500/40 peer-disabled:opacity-50 ${
+                                  restaurant.isActive
+                                    ? "bg-brand-500"
+                                    : "bg-gray-200 dark:bg-white/15"
+                                }`}
+                              >
+                                <span
+                                  className={`pointer-events-none absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition duration-200 ease-in-out ${
+                                    restaurant.isActive ? "translate-x-5" : "translate-x-0"
+                                  }`}
+                                />
+                              </span>
+                              <span className="text-xs text-gray-600 dark:text-gray-400">
+                                {restaurant.isActive ? "On" : "Off"}
+                              </span>
+                            </label>
+                          </div>
                         </td>
                       </tr>
                     ))
@@ -534,16 +603,6 @@ export default function SuperadminDashboardClient({
 
       {activeTab === "admins" ? (
         <section className="mt-6 space-y-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <button
-              type="button"
-              onClick={openAdminModal}
-              className="inline-flex items-center justify-center rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600"
-            >
-              {pageType === "Users" ? "Add User" : "Add Restaurant Admin"}
-            </button>
-          </div>
-
           <div className="rounded-xl border border-gray-200 p-4 dark:border-gray-800">
             <div className="mb-4">
               <input

@@ -471,6 +471,36 @@ export const createRestaurant = async (
   return (await response.json()) as unknown;
 };
 
+export type UpdateRestaurantPayload = {
+  name: string;
+  mobileNumber: string;
+  isActive: boolean;
+};
+
+/**
+ * Updates a restaurant. `PATCH /restaurants/{id}` — body matches backend DTO.
+ */
+export const updateRestaurant = async (
+  accessToken: string,
+  restaurantId: string,
+  payload: UpdateRestaurantPayload
+) => {
+  const response = await makeRequest(
+    `${AUTH_API_BASE_URL}/restaurants/${encodeURIComponent(restaurantId)}`,
+    {
+      method: "PATCH",
+      headers: getAuthHeaders(accessToken),
+      body: JSON.stringify(payload),
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(await parseApiError(response, "Failed to update restaurant."));
+  }
+
+  return (await response.json()) as unknown;
+};
+
 export type CreateRestaurantAdminPayload = {
   restaurantId: string;
   name: string;

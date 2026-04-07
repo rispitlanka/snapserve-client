@@ -9,6 +9,7 @@ export {
   listInventoryCategories,
   listInventoryItems,
   listInventorySubCategories,
+  updateInventoryItemCurrentStock,
 } from "./api";
 
 export type {
@@ -21,4 +22,5 @@ export type {
   InventoryItem,
   InventoryItemHistoryEntry,
   InventorySubCategory,
+  UpdateInventoryItemStockPayload,
 } from "./types";
