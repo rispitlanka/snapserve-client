@@ -5,9 +5,11 @@ import { Modal } from "@/components/ui/modal";
 import {
   createRestaurant,
   createRestaurantAdmin,
+  deleteRestaurantAdmin,
   getAuthSession,
   listRestaurantAdmins,
   listRestaurants,
+  updateRestaurantAdmin,
 } from "@/lib/auth";
 import { useClientPagedSlice } from "@/lib/pagination/clientPaging";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -42,6 +44,8 @@ export default function SuperadminDashboardClient({
   const [activeTab, setActiveTab] = useState<ManagementTab>(defaultActiveTab);
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [name, setName] = useState("");
+  const [restaurantIdInput, setRestaurantIdInput] = useState("");
+  const [restaurantMobile, setRestaurantMobile] = useState("");
   const [isActive, setIsActive] = useState(true);
   const [restaurantSearch, setRestaurantSearch] = useState("");
   const [showAddRestaurantForm, setShowAddRestaurantForm] = useState(false);
@@ -49,12 +53,17 @@ export default function SuperadminDashboardClient({
   const [adminError, setAdminError] = useState("");
   const [adminSuccess, setAdminSuccess] = useState("");
   const [adminName, setAdminName] = useState("");
-  const [businessId, setBusinessId] = useState("");
   const [adminPassword, setAdminPassword] = useState("");
   const [adminSearch, setAdminSearch] = useState("");
   const [showAddAdminForm, setShowAddAdminForm] = useState(false);
   const [selectedRestaurantId, setSelectedRestaurantId] = useState("");
   const [createdAdmins, setCreatedAdmins] = useState<CreatedAdmin[]>([]);
+  const [editingAdmin, setEditingAdmin] = useState<CreatedAdmin | null>(null);
+  const [deletingAdmin, setDeletingAdmin] = useState<CreatedAdmin | null>(null);
+  const [isEditingAdmin, setIsEditingAdmin] = useState(false);
+  const [isDeletingAdmin, setIsDeletingAdmin] = useState(false);
+  const [editAdminName, setEditAdminName] = useState("");
+  const [editAdminPassword, setEditAdminPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [adminLoading, setAdminLoading] = useState(false);
   const [restaurantPage, setRestaurantPage] = useState(1);
@@ -74,6 +83,8 @@ export default function SuperadminDashboardClient({
 
   const closeRestaurantModal = () => {
     setName("");
+    setRestaurantIdInput("");
+    setRestaurantMobile("");
     setIsActive(true);
     setError("");
     setShowAddRestaurantForm(false);
@@ -87,12 +98,37 @@ export default function SuperadminDashboardClient({
 
   const closeAdminModal = () => {
     setAdminName("");
-    setBusinessId("");
     setAdminPassword("");
     setSelectedRestaurantId("");
     setAdminError("");
     setAdminSuccess("");
     setShowAddAdminForm(false);
+  };
+
+  const openEditAdminModal = (admin: CreatedAdmin) => {
+    setAdminError("");
+    setAdminSuccess("");
+    setEditingAdmin(admin);
+    setEditAdminName(admin.name);
+    setEditAdminPassword("");
+  };
+
+  const closeEditAdminModal = () => {
+    setEditingAdmin(null);
+    setEditAdminName("");
+    setEditAdminPassword("");
+    setIsEditingAdmin(false);
+  };
+
+  const openDeleteAdminModal = (admin: CreatedAdmin) => {
+    setAdminError("");
+    setAdminSuccess("");
+    setDeletingAdmin(admin);
+  };
+
+  const closeDeleteAdminModal = () => {
+    setDeletingAdmin(null);
+    setIsDeletingAdmin(false);
   };
 
   const loadRestaurants = async () => {
@@ -144,7 +180,13 @@ export default function SuperadminDashboardClient({
       ) as Array<Record<string, unknown>>;
 
       const mapped = list.map((item, index) => ({
-        id: String(item.id ?? `${String(item.restaurantId ?? "")}-${String(item.name ?? "")}-${index}`),
+        id: String(
+          item.id ??
+            item._id ??
+            item.userId ??
+            item.user_id ??
+            `${String(item.restaurantId ?? item.restaurant_id ?? "")}-${String(item.name ?? item.username ?? "")}-${index}`
+        ),
         name: String(item.name ?? item.username ?? item.userName ?? "").trim(),
         restaurantId: String(item.restaurantId ?? item.restaurant_id ?? item.businessId ?? item.business_id ?? "").trim(),
       }));
@@ -158,13 +200,18 @@ export default function SuperadminDashboardClient({
   };
 
   const handleAddRestaurant = async () => {
-    if (!name.trim()) return;
+    const trimmedId = restaurantIdInput.trim();
+    const trimmedName = name.trim();
+    const trimmedMobile = restaurantMobile.trim();
+    if (!trimmedId || !trimmedName || !trimmedMobile) return;
     setError("");
     try {
       const session = getAuthSession();
       if (!session) throw new Error("Session not found");
       await createRestaurant(session.accessToken, {
-        name: name.trim(),
+        id: trimmedId,
+        name: trimmedName,
+        mobileNumber: trimmedMobile,
         isActive,
       });
       toast.success("Restaurant created successfully.");
@@ -180,7 +227,6 @@ export default function SuperadminDashboardClient({
   const handleAddRestaurantAdmin = async () => {
     const trimmedAdminName = adminName.trim();
     const trimmedRestaurantId = selectedRestaurantId.trim();
-    const trimmedBusinessId = businessId.trim();
 
     setAdminError("");
     setAdminSuccess("");
@@ -190,8 +236,8 @@ export default function SuperadminDashboardClient({
       return;
     }
 
-    if (!trimmedBusinessId) {
-      setAdminError("Business ID is required.");
+    if (!adminPassword.trim() || adminPassword.trim().length < 8) {
+      setAdminError("Password must be at least 8 characters.");
       return;
     }
 
@@ -199,11 +245,6 @@ export default function SuperadminDashboardClient({
       setAdminError(
         "Admin name must start with a letter and be 3-50 characters (letters, numbers, space, . _ -)."
       );
-      return;
-    }
-
-    if (!adminPassword.trim() || adminPassword.trim().length < 6) {
-      setAdminError("Admin password must be at least 6 characters.");
       return;
     }
 
@@ -224,7 +265,6 @@ export default function SuperadminDashboardClient({
 
       await createRestaurantAdmin(session.accessToken, {
         restaurantId: trimmedRestaurantId,
-        businessId: trimmedBusinessId,
         name: trimmedAdminName,
         password: adminPassword.trim(),
       });
@@ -238,6 +278,67 @@ export default function SuperadminDashboardClient({
         err instanceof Error ? err.message : "Failed to create restaurant admin.";
       setAdminError(message);
       toast.error(message);
+    }
+  };
+
+  const handleUpdateRestaurantAdmin = async () => {
+    if (!editingAdmin) return;
+    const nextName = editAdminName.trim();
+    const nextPassword = editAdminPassword.trim();
+
+    if (!isValidAdminName(nextName)) {
+      setAdminError(
+        "Admin name must start with a letter and be 3-50 characters (letters, numbers, space, . _ -)."
+      );
+      return;
+    }
+    if (nextPassword && nextPassword.length < 8) {
+      setAdminError("Password must be at least 8 characters.");
+      return;
+    }
+
+    try {
+      const session = getAuthSession();
+      if (!session) throw new Error("Session not found");
+      setIsEditingAdmin(true);
+      setAdminError("");
+
+      await updateRestaurantAdmin(session.accessToken, editingAdmin.id, {
+        name: nextName,
+        password: nextPassword || undefined,
+      });
+
+      toast.success("Restaurant admin updated successfully.");
+      closeEditAdminModal();
+      await loadRestaurantAdmins();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to update restaurant admin.";
+      setAdminError(message);
+      toast.error(message);
+    } finally {
+      setIsEditingAdmin(false);
+    }
+  };
+
+  const handleDeleteRestaurantAdmin = async () => {
+    if (!deletingAdmin) return;
+
+    try {
+      const session = getAuthSession();
+      if (!session) throw new Error("Session not found");
+      setIsDeletingAdmin(true);
+      setAdminError("");
+
+      await deleteRestaurantAdmin(session.accessToken, deletingAdmin.id);
+      toast.success("Restaurant admin deleted successfully.");
+      closeDeleteAdminModal();
+      await loadRestaurantAdmins();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to delete restaurant admin.";
+      setAdminError(message);
+      toast.error(message);
+    } finally {
+      setIsDeletingAdmin(false);
     }
   };
 
@@ -270,7 +371,7 @@ export default function SuperadminDashboardClient({
         .toLowerCase()
         .includes(query);
     });
-  }, [createdAdmins, adminSearch, restaurants]);
+  }, [createdAdmins, adminSearch, getRestaurantNameById]);
 
   const restaurantPaged = useClientPagedSlice(
     filteredRestaurants,
@@ -369,19 +470,18 @@ export default function SuperadminDashboardClient({
                     <th className="px-3 py-3">Restaurant</th>
                     <th className="px-3 py-3">Restaurant ID</th>
                     <th className="px-3 py-3">Status</th>
-                    <th className="px-3 py-3 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
                   {loading ? (
                     <tr>
-                      <td colSpan={4} className="px-3 py-6 text-sm text-gray-500 dark:text-gray-400">
+                      <td colSpan={3} className="px-3 py-6 text-sm text-gray-500 dark:text-gray-400">
                         Loading restaurants...
                       </td>
                     </tr>
                   ) : filteredRestaurants.length === 0 ? (
                     <tr>
-                      <td colSpan={4} className="px-3 py-6 text-sm text-gray-500 dark:text-gray-400">
+                      <td colSpan={3} className="px-3 py-6 text-sm text-gray-500 dark:text-gray-400">
                         No restaurants found.
                       </td>
                     </tr>
@@ -404,26 +504,6 @@ export default function SuperadminDashboardClient({
                           >
                             {restaurant.isActive ? "Active" : "Inactive"}
                           </span>
-                        </td>
-                        <td className="px-3 py-3 text-right">
-                          <div className="inline-flex items-center gap-2">
-                            <button
-                              type="button"
-                              disabled
-                              title="Edit action is not implemented yet"
-                              className="rounded-md border border-gray-300 px-2.5 py-1 text-xs text-gray-500 disabled:opacity-70 dark:border-gray-700"
-                            >
-                              Edit
-                            </button>
-                            <button
-                              type="button"
-                              disabled
-                              title="Delete action is not implemented yet"
-                              className="rounded-md border border-error-300 px-2.5 py-1 text-xs text-error-500 disabled:opacity-70 dark:border-error-500/50"
-                            >
-                              Delete
-                            </button>
-                          </div>
                         </td>
                       </tr>
                     ))
@@ -513,17 +593,15 @@ export default function SuperadminDashboardClient({
                           <div className="inline-flex items-center gap-2">
                             <button
                               type="button"
-                              disabled
-                              title="Edit action is not implemented yet"
-                              className="rounded-md border border-gray-300 px-2.5 py-1 text-xs text-gray-500 disabled:opacity-70 dark:border-gray-700"
+                              onClick={() => openEditAdminModal(admin)}
+                              className="rounded-md border border-gray-300 px-2.5 py-1 text-xs text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
                             >
                               Edit
                             </button>
                             <button
                               type="button"
-                              disabled
-                              title="Delete action is not implemented yet"
-                              className="rounded-md border border-error-300 px-2.5 py-1 text-xs text-error-500 disabled:opacity-70 dark:border-error-500/50"
+                              onClick={() => openDeleteAdminModal(admin)}
+                              className="rounded-md border border-error-300 px-2.5 py-1 text-xs text-error-600 hover:bg-error-50 dark:border-error-500/50 dark:text-error-400 dark:hover:bg-error-500/10"
                             >
                               Delete
                             </button>
@@ -573,6 +651,22 @@ export default function SuperadminDashboardClient({
 
           <div>
             <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Restaurant ID <span className="text-error-500">*</span>
+            </label>
+            <input
+              type="text"
+              value={restaurantIdInput}
+              onChange={(e) => setRestaurantIdInput(e.target.value)}
+              placeholder="e.g. rispit-downtown-01"
+              className="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
+            />
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              Unique identifier sent to the API as <code className="text-xs">id</code>.
+            </p>
+          </div>
+
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
               Name <span className="text-error-500">*</span>
             </label>
             <input
@@ -580,6 +674,19 @@ export default function SuperadminDashboardClient({
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Restaurant name"
+              className="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
+            />
+          </div>
+
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Mobile number <span className="text-error-500">*</span>
+            </label>
+            <input
+              type="tel"
+              value={restaurantMobile}
+              onChange={(e) => setRestaurantMobile(e.target.value)}
+              placeholder="9876543210"
               className="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
             />
           </div>
@@ -608,7 +715,7 @@ export default function SuperadminDashboardClient({
             <button
               type="button"
               onClick={handleAddRestaurant}
-              disabled={!name.trim()}
+              disabled={!restaurantIdInput.trim() || !name.trim() || !restaurantMobile.trim()}
               className="inline-flex items-center justify-center rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50"
             >
               Save Restaurant
@@ -628,7 +735,7 @@ export default function SuperadminDashboardClient({
               Add Restaurant Admin
             </h3>
             <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-              Create a restaurant admin and link it to a restaurant.
+              Creates a login for the selected restaurant. Password must be at least 8 characters.
             </p>
           </div>
 
@@ -638,11 +745,7 @@ export default function SuperadminDashboardClient({
             </label>
             <select
               value={selectedRestaurantId}
-              onChange={(e) => {
-                const nextRestaurantId = e.target.value;
-                setSelectedRestaurantId(nextRestaurantId);
-                setBusinessId((current) => current || nextRestaurantId);
-              }}
+              onChange={(e) => setSelectedRestaurantId(e.target.value)}
               className="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
             >
               <option value="">Select restaurant</option>
@@ -652,19 +755,6 @@ export default function SuperadminDashboardClient({
                 </option>
               ))}
             </select>
-          </div>
-
-          <div>
-            <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
-              Business ID <span className="text-error-500">*</span>
-            </label>
-            <input
-              type="text"
-              value={businessId}
-              onChange={(e) => setBusinessId(e.target.value)}
-              placeholder="Business ID"
-              className="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
-            />
           </div>
 
           <div>
@@ -682,13 +772,14 @@ export default function SuperadminDashboardClient({
 
           <div>
             <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
-              Admin Password <span className="text-error-500">*</span>
+              Password <span className="text-error-500">*</span>
             </label>
             <input
               type="password"
               value={adminPassword}
               onChange={(e) => setAdminPassword(e.target.value)}
-              placeholder="Minimum 6 characters"
+              placeholder="At least 8 characters"
+              autoComplete="new-password"
               className="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
             />
           </div>
@@ -704,10 +795,126 @@ export default function SuperadminDashboardClient({
             <button
               type="button"
               onClick={handleAddRestaurantAdmin}
-              disabled={!selectedRestaurantId.trim() || !businessId.trim() || !adminName.trim() || !adminPassword.trim()}
+              disabled={
+                !selectedRestaurantId.trim() ||
+                !adminName.trim() ||
+                !adminPassword.trim() ||
+                adminPassword.trim().length < 8
+              }
               className="inline-flex items-center justify-center rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50"
             >
               Save Restaurant Admin
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal
+        isOpen={Boolean(editingAdmin)}
+        onClose={closeEditAdminModal}
+        className="max-w-[560px] p-4 sm:p-6"
+      >
+        <div className="space-y-5">
+          <div>
+            <h3 className="text-xl font-semibold text-gray-800 dark:text-white/90">
+              Edit Restaurant Admin
+            </h3>
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              Update the admin name and optionally set a new password (min 8 characters).
+            </p>
+          </div>
+
+          {adminError ? <p className="text-sm text-error-500">{adminError}</p> : null}
+
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Admin Name <span className="text-error-500">*</span>
+            </label>
+            <input
+              type="text"
+              value={editAdminName}
+              onChange={(e) => setEditAdminName(e.target.value)}
+              className="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+            />
+          </div>
+
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
+              New Password
+            </label>
+            <input
+              type="password"
+              value={editAdminPassword}
+              onChange={(e) => setEditAdminPassword(e.target.value)}
+              placeholder="Leave blank to keep existing"
+              autoComplete="new-password"
+              className="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+            />
+          </div>
+
+          <div className="flex items-center justify-end gap-3">
+            <button
+              type="button"
+              onClick={closeEditAdminModal}
+              disabled={isEditingAdmin}
+              className="inline-flex items-center justify-center rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleUpdateRestaurantAdmin}
+              disabled={isEditingAdmin || !editAdminName.trim()}
+              className="inline-flex items-center justify-center rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {isEditingAdmin ? "Saving..." : "Save Changes"}
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal
+        isOpen={Boolean(deletingAdmin)}
+        onClose={closeDeleteAdminModal}
+        className="max-w-[520px] p-4 sm:p-6"
+      >
+        <div className="space-y-5">
+          <div>
+            <h3 className="text-xl font-semibold text-gray-800 dark:text-white/90">
+              Delete Restaurant Admin
+            </h3>
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              This action cannot be undone.
+            </p>
+          </div>
+
+          {deletingAdmin ? (
+            <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 text-sm text-gray-700 dark:border-gray-800 dark:bg-gray-900/40 dark:text-gray-300">
+              <div className="flex items-center justify-between gap-3">
+                <span className="font-medium">{deletingAdmin.name}</span>
+                <span className="text-xs text-gray-500 dark:text-gray-400">
+                  {deletingAdmin.restaurantId}
+                </span>
+              </div>
+            </div>
+          ) : null}
+
+          <div className="flex items-center justify-end gap-3">
+            <button
+              type="button"
+              onClick={closeDeleteAdminModal}
+              disabled={isDeletingAdmin}
+              className="inline-flex items-center justify-center rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleDeleteRestaurantAdmin}
+              disabled={isDeletingAdmin}
+              className="inline-flex items-center justify-center rounded-lg bg-error-600 px-4 py-2 text-sm font-medium text-white hover:bg-error-700 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {isDeletingAdmin ? "Deleting..." : "Delete"}
             </button>
           </div>
         </div>
