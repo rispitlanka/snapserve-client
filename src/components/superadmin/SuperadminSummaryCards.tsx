@@ -114,9 +114,6 @@ export default function SuperadminSummaryCards() {
         <h1 className="text-2xl font-semibold text-gray-800 dark:text-white/90">
           Superadmin Dashboard
         </h1>
-        <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-          Overview of restaurants, Users, and subscription status.
-        </p>
       </div>
 
       {error ? <p className="text-sm text-error-500">{error}</p> : null}
@@ -139,8 +136,8 @@ export default function SuperadminSummaryCards() {
         <MetricCard
           title="Total Users"
           value={summary.totalRestaurantAdmins.toLocaleString()}
-          icon={<GroupIcon className="size-6 text-info-600 dark:text-info-400" />}
-          accentClassName="bg-info-50 dark:bg-info-500/10"
+          icon={<GroupIcon className="size-6 text-brand-600 dark:text-brand-400" />}
+          accentClassName="bg-brand-50 dark:bg-brand-500/10"
           isLoading={isLoading}
         />
         <MetricCard

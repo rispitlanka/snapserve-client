@@ -1,13 +1,14 @@
 "use client";
 
 import MetricCard from "@/components/common/MetricCard";
+import FlatpickrDateInput from "@/components/form/FlatpickrDateInput";
 import { BoxCubeIcon, DollarLineIcon, GroupIcon, UserIcon } from "@/icons";
 import { AUTH_API_BASE_URL, getAuthSession, listStaff, listSuppliers, ROLE_DASHBOARD_ROUTE } from "@/lib/auth";
 import { listInventoryItems } from "@/lib/inventory";
 import type { ApexOptions } from "apexcharts";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 const ReactApexChart = dynamic(() => import("react-apexcharts"), { ssr: false });
 
@@ -27,10 +28,17 @@ type AdminSummary = {
   newCustomersWeekly: number;
   monthlyRevenueSeries: number[];
   monthlyRevenueLabels: string[];
+  weeklyTrendSeries: number[];
+  weeklyTrendLabels: string[];
   recentOrders: RecentOrder[];
   topSellingItems: Array<{ name: string; qty: number }>;
   totalStaffs: number;
   totalSuppliers: number;
+};
+
+type DateRangeFilter = {
+  startDate: string;
+  endDate: string;
 };
 
 const getList = (raw: unknown): Array<Record<string, unknown>> => {
@@ -59,11 +67,6 @@ const getDate = (value: unknown): Date | null => {
   return Number.isNaN(d.getTime()) ? null : d;
 };
 
-const isSameDay = (date: Date, target: Date) =>
-  date.getFullYear() === target.getFullYear() &&
-  date.getMonth() === target.getMonth() &&
-  date.getDate() === target.getDate();
-
 const isAfter = (date: Date, compare: Date) => date.getTime() >= compare.getTime();
 
 const parseOrdersFromAny = (raw: unknown): Array<Record<string, unknown>> => getList(raw);
@@ -71,8 +74,25 @@ const parseOrdersFromAny = (raw: unknown): Array<Record<string, unknown>> => get
 const humanTime = (value: Date) =>
   value.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
-const dayLabel = (date: Date) =>
-  date.toLocaleDateString("en-LK", { day: "2-digit", month: "short" });
+const toDateInputValue = (date: Date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+const toRangeLabel = (startDate: string, endDate: string) => {
+  if (!startDate || !endDate) return "Selected Range";
+  if (startDate === endDate) return "Selected Day";
+
+  const start = new Date(`${startDate}T00:00:00`);
+  const end = new Date(`${endDate}T00:00:00`);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+    return "Selected Range";
+  }
+
+  return `${start.toLocaleDateString("en-LK", { day: "2-digit", month: "short" })} - ${end.toLocaleDateString("en-LK", { day: "2-digit", month: "short" })}`;
+};
 
 const fetchFirstWorkingJson = async (
   token: string,
@@ -99,6 +119,20 @@ const fetchFirstWorkingJson = async (
 
 export default function RestaurantAdminSummaryCards() {
   const router = useRouter();
+  const today = new Date();
+  const defaultEndDate = toDateInputValue(today);
+  const sevenDaysAgo = new Date(today);
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+  const defaultStartDate = toDateInputValue(sevenDaysAgo);
+  const [dateFilter, setDateFilter] = useState<DateRangeFilter>({
+    startDate: defaultStartDate,
+    endDate: defaultEndDate,
+  });
+  const [appliedDateFilter, setAppliedDateFilter] = useState<DateRangeFilter>({
+    startDate: defaultStartDate,
+    endDate: defaultEndDate,
+  });
+  const [filterError, setFilterError] = useState("");
   const [summary, setSummary] = useState<AdminSummary>({
     todaySalesLkr: 0,
     todayOrders: 0,
@@ -107,6 +141,8 @@ export default function RestaurantAdminSummaryCards() {
     newCustomersWeekly: 0,
     monthlyRevenueSeries: [],
     monthlyRevenueLabels: [],
+    weeklyTrendSeries: [],
+    weeklyTrendLabels: [],
     recentOrders: [],
     topSellingItems: [],
     totalStaffs: 0,
@@ -141,6 +177,8 @@ export default function RestaurantAdminSummaryCards() {
         const now = new Date();
         const weekStart = new Date(now);
         weekStart.setDate(weekStart.getDate() - 7);
+        const rangeStart = new Date(`${appliedDateFilter.startDate}T00:00:00`);
+        const rangeEnd = new Date(`${appliedDateFilter.endDate}T23:59:59.999`);
 
         const orderPayload = await fetchFirstWorkingJson(session.accessToken, [
           "/orders",
@@ -151,20 +189,29 @@ export default function RestaurantAdminSummaryCards() {
         ]);
 
         const orders = parseOrdersFromAny(orderPayload);
-        let todayOrders = 0;
-        let todaySalesLkr = 0;
+        let rangeOrders = 0;
+        let rangeSalesLkr = 0;
         let weeklySalesLkr = 0;
-        let newCustomersToday = 0;
+        let rangeCustomers = 0;
         let newCustomersWeekly = 0;
         const topSellingAccumulator = new Map<string, number>();
-        const uniqueCustomersToday = new Set<string>();
+        const uniqueCustomersInRange = new Set<string>();
         const uniqueCustomersWeekly = new Set<string>();
-        const monthlyRevenueMap = new Map<string, number>();
-        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-        const monthDays = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-        for (let d = 1; d <= monthDays; d++) {
-          const day = new Date(now.getFullYear(), now.getMonth(), d);
-          monthlyRevenueMap.set(dayLabel(day), 0);
+        const monthlyRevenueLabels = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        const monthlyRevenueSeries = new Array<number>(12).fill(0);
+
+        // Last 7 days (inclusive): one bar per calendar day, oldest → newest.
+        const weeklyTrendMap = new Map<string, number>();
+        const weeklyTrendLabels: string[] = [];
+        for (let i = 0; i < 7; i++) {
+          const d = new Date(now);
+          d.setHours(0, 0, 0, 0);
+          d.setDate(d.getDate() - (6 - i));
+          const key = toDateInputValue(d);
+          weeklyTrendMap.set(key, 0);
+          weeklyTrendLabels.push(
+            d.toLocaleDateString("en-LK", { weekday: "short", day: "2-digit", month: "short" })
+          );
         }
         const recentOrders: Array<{ createdAt: Date; row: RecentOrder }> = [];
 
@@ -180,16 +227,35 @@ export default function RestaurantAdminSummaryCards() {
               order.amount
           );
 
-          if (createdAt && isSameDay(createdAt, now)) {
-            todayOrders += 1;
-            todaySalesLkr += amount;
+          const inSelectedRange =
+            Boolean(
+              createdAt &&
+                !Number.isNaN(rangeStart.getTime()) &&
+                !Number.isNaN(rangeEnd.getTime()) &&
+                createdAt.getTime() >= rangeStart.getTime() &&
+                createdAt.getTime() <= rangeEnd.getTime()
+            );
+
+          if (inSelectedRange) {
+            rangeOrders += 1;
+            rangeSalesLkr += amount;
           }
           if (createdAt && isAfter(createdAt, weekStart)) {
             weeklySalesLkr += amount;
           }
-          if (createdAt && isAfter(createdAt, monthStart)) {
-            const key = dayLabel(createdAt);
-            monthlyRevenueMap.set(key, (monthlyRevenueMap.get(key) ?? 0) + amount);
+          if (
+            createdAt &&
+            createdAt.getFullYear() === now.getFullYear() &&
+            createdAt.getMonth() <= now.getMonth()
+          ) {
+            const monthIndex = createdAt.getMonth();
+            monthlyRevenueSeries[monthIndex] += amount;
+          }
+          if (createdAt) {
+            const dayKey = toDateInputValue(createdAt);
+            if (weeklyTrendMap.has(dayKey)) {
+              weeklyTrendMap.set(dayKey, (weeklyTrendMap.get(dayKey) ?? 0) + amount);
+            }
           }
 
           const customerName = String(
@@ -209,8 +275,8 @@ export default function RestaurantAdminSummaryCards() {
               order.user_id ??
               customerName
           ).trim();
-          if (createdAt && isSameDay(createdAt, now) && customerIdentity) {
-            uniqueCustomersToday.add(customerIdentity);
+          if (inSelectedRange && customerIdentity) {
+            uniqueCustomersInRange.add(customerIdentity);
           }
           if (createdAt && isAfter(createdAt, weekStart) && customerIdentity) {
             uniqueCustomersWeekly.add(customerIdentity);
@@ -250,23 +316,31 @@ export default function RestaurantAdminSummaryCards() {
           topSellingItems.length > 0
             ? topSellingItems
             : inventoryItems.slice(0, 5).map((item) => ({ name: item.name, qty: 0 }));
-        newCustomersToday = uniqueCustomersToday.size;
+        rangeCustomers = uniqueCustomersInRange.size;
         newCustomersWeekly = uniqueCustomersWeekly.size;
-        const monthlyRevenueLabels = [...monthlyRevenueMap.keys()];
-        const monthlyRevenueSeries = monthlyRevenueLabels.map((label) => monthlyRevenueMap.get(label) ?? 0);
+        const weeklyTrendSeries = weeklyTrendLabels.map(
+          (_, idx) => {
+            const d = new Date(now);
+            d.setHours(0, 0, 0, 0);
+            d.setDate(d.getDate() - (6 - idx));
+            return weeklyTrendMap.get(toDateInputValue(d)) ?? 0;
+          }
+        );
         const recentOrdersRows = recentOrders
           .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
           .slice(0, 8)
           .map((entry) => entry.row);
 
         setSummary({
-          todaySalesLkr,
-          todayOrders,
+          todaySalesLkr: rangeSalesLkr,
+          todayOrders: rangeOrders,
           weeklySalesLkr,
-          newCustomersToday,
+          newCustomersToday: rangeCustomers,
           newCustomersWeekly,
           monthlyRevenueSeries,
           monthlyRevenueLabels,
+          weeklyTrendSeries,
+          weeklyTrendLabels,
           recentOrders: recentOrdersRows,
           topSellingItems: fallbackTopItems,
           totalStaffs: staff.length,
@@ -284,15 +358,39 @@ export default function RestaurantAdminSummaryCards() {
     };
 
     void loadSummary();
-  }, [router]);
+  }, [router, appliedDateFilter]);
 
-  const chartOptions: ApexOptions = {
+  const statsRangeLabel = toRangeLabel(appliedDateFilter.startDate, appliedDateFilter.endDate);
+
+  const todayStr = useMemo(() => toDateInputValue(new Date()), []);
+
+  const handleApplyDateFilter = () => {
+    if (!dateFilter.startDate || !dateFilter.endDate) {
+      setFilterError("Start date and end date are required.");
+      return;
+    }
+
+    if (dateFilter.startDate > dateFilter.endDate) {
+      setFilterError("Start date cannot be after end date.");
+      return;
+    }
+
+    setFilterError("");
+    setAppliedDateFilter(dateFilter);
+  };
+
+  const monthlyChartOptions: ApexOptions = {
     chart: {
-      type: "area",
+      type: "bar",
       toolbar: { show: false },
       fontFamily: "Outfit, sans-serif",
     },
-    stroke: { curve: "smooth", width: 2 },
+    plotOptions: {
+      bar: {
+        columnWidth: "50%",
+        borderRadius: 4,
+      },
+    },
     dataLabels: { enabled: false },
     colors: ["#465fff"],
     xaxis: {
@@ -314,20 +412,78 @@ export default function RestaurantAdminSummaryCards() {
 
   const chartSeries = [
     {
-      name: "Daily Sales",
+      name: "Monthly Sales",
       data: summary.monthlyRevenueSeries,
+    },
+  ];
+
+  const weeklyChartOptions: ApexOptions = {
+    chart: {
+      type: "bar",
+      toolbar: { show: false },
+      fontFamily: "Outfit, sans-serif",
+    },
+    plotOptions: {
+      bar: {
+        columnWidth: "55%",
+        borderRadius: 4,
+      },
+    },
+    dataLabels: { enabled: false },
+    colors: ["#22c55e"],
+    xaxis: {
+      categories: summary.weeklyTrendLabels,
+      axisBorder: { show: false },
+      axisTicks: { show: false },
+      labels: { rotate: -35 },
+    },
+    yaxis: {
+      labels: {
+        formatter: (value) => `LKR ${Math.round(value).toLocaleString()}`,
+      },
+    },
+    grid: { borderColor: "#e5e7eb" },
+    tooltip: {
+      y: { formatter: (value) => `LKR ${Number(value).toLocaleString()}` },
+    },
+  };
+
+  const weeklyChartSeries = [
+    {
+      name: "Daily Sales",
+      data: summary.weeklyTrendSeries,
     },
   ];
 
   return (
     <section className="space-y-6">
-      <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-theme-xs dark:border-gray-800 dark:bg-white/3">
-        <h1 className="text-2xl font-semibold text-gray-800 dark:text-white/90">
-          Admin Dashboard
-        </h1>
-        <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-          Overview of today&apos;s performance, weekly sales, and top-selling items.
-        </p>
+      <div className="flex justify-start sm:justify-end">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+          <FlatpickrDateInput
+            label="Start Date"
+            value={dateFilter.startDate}
+            onChange={(dateStr) =>
+              setDateFilter((prev) => ({ ...prev, startDate: dateStr }))
+            }
+            maxDate={dateFilter.endDate || todayStr}
+          />
+          <FlatpickrDateInput
+            label="End Date"
+            value={dateFilter.endDate}
+            onChange={(dateStr) =>
+              setDateFilter((prev) => ({ ...prev, endDate: dateStr }))
+            }
+            minDate={dateFilter.startDate}
+            maxDate={todayStr}
+          />
+          <button
+            type="button"
+            onClick={handleApplyDateFilter}
+            className="inline-flex h-10 items-center justify-center rounded-lg bg-brand-500 px-4 text-sm font-medium text-white hover:bg-brand-600"
+          >
+            Filter
+          </button>
+        </div>
       </div>
 
       {error ? (
@@ -335,10 +491,15 @@ export default function RestaurantAdminSummaryCards() {
           {error}
         </div>
       ) : null}
+      {filterError ? (
+        <div className="rounded-xl border border-error-200 bg-error-50 px-4 py-3 text-sm text-error-600 dark:border-error-500/30 dark:bg-error-500/10 dark:text-error-400">
+          {filterError}
+        </div>
+      ) : null}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
         <MetricCard
-          title="Today’s Sales"
+          title={`${statsRangeLabel} Sales`}
           value={new Intl.NumberFormat("en-LK", {
             style: "currency",
             currency: "LKR",
@@ -350,7 +511,7 @@ export default function RestaurantAdminSummaryCards() {
           isLoading={isLoading}
         />
         <MetricCard
-          title="Today’s Orders"
+          title={`${statsRangeLabel} Orders`}
           value={summary.todayOrders.toLocaleString()}
           icon={<GroupIcon className="size-6 text-brand-600 dark:text-brand-400" />}
           accentClassName="bg-brand-50 dark:bg-brand-500/10"
@@ -364,8 +525,8 @@ export default function RestaurantAdminSummaryCards() {
             minimumFractionDigits: 2,
             maximumFractionDigits: 2,
           }).format(summary.weeklySalesLkr)}
-          icon={<DollarLineIcon className="size-6 text-info-600 dark:text-info-400" />}
-          accentClassName="bg-info-50 dark:bg-info-500/10"
+          icon={<DollarLineIcon className="size-6 text-brand-600 dark:text-brand-400" />}
+          accentClassName="bg-brand-50 dark:bg-brand-500/10"
           isLoading={isLoading}
         />
         <MetricCard
@@ -382,13 +543,6 @@ export default function RestaurantAdminSummaryCards() {
           accentClassName="bg-success-50 dark:bg-success-500/10"
           isLoading={isLoading}
         />
-        <MetricCard
-          title="New Customers (Today)"
-          value={summary.newCustomersToday.toLocaleString()}
-          icon={<UserIcon className="size-6 text-info-600 dark:text-info-400" />}
-          accentClassName="bg-info-50 dark:bg-info-500/10"
-          isLoading={isLoading}
-        />
       </div>
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
@@ -396,49 +550,55 @@ export default function RestaurantAdminSummaryCards() {
           <h2 className="text-lg font-semibold text-gray-800 dark:text-white/90">
             Monthly Revenue Trend
           </h2>
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            Daily sales for the current month in LKR.
-          </p>
           <div className="mt-4">
             {isLoading ? (
               <p className="text-sm text-gray-500 dark:text-gray-400">Loading revenue chart...</p>
             ) : summary.monthlyRevenueSeries.length === 0 ? (
               <p className="text-sm text-gray-500 dark:text-gray-400">No monthly sales data available.</p>
             ) : (
-              <ReactApexChart options={chartOptions} series={chartSeries} type="area" height={280} />
+              <ReactApexChart options={monthlyChartOptions} series={chartSeries} type="bar" height={280} />
             )}
           </div>
         </div>
 
         <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-theme-xs dark:border-gray-800 dark:bg-white/3">
           <h2 className="text-lg font-semibold text-gray-800 dark:text-white/90">
-            New Customers
+            Last 7 Days Sales
           </h2>
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            Unique customer growth this period.
-          </p>
-          <div className="mt-4 space-y-3">
-            <div className="rounded-xl bg-gray-50 px-4 py-3 dark:bg-gray-900/50">
-              <p className="text-xs text-gray-500 dark:text-gray-400">Today</p>
-              <p className="text-xl font-semibold text-gray-800 dark:text-white/90">
-                {summary.newCustomersToday.toLocaleString()}
-              </p>
-            </div>
-            <div className="rounded-xl bg-gray-50 px-4 py-3 dark:bg-gray-900/50">
-              <p className="text-xs text-gray-500 dark:text-gray-400">Last 7 days</p>
-              <p className="text-xl font-semibold text-gray-800 dark:text-white/90">
-                {summary.newCustomersWeekly.toLocaleString()}
-              </p>
-            </div>
+          <div className="mt-4">
+            {isLoading ? (
+              <p className="text-sm text-gray-500 dark:text-gray-400">Loading weekly trend...</p>
+            ) : summary.weeklyTrendSeries.length === 0 ? (
+              <p className="text-sm text-gray-500 dark:text-gray-400">No weekly sales data available.</p>
+            ) : (
+              <ReactApexChart options={weeklyChartOptions} series={weeklyChartSeries} type="bar" height={280} />
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-theme-xs dark:border-gray-800 dark:bg-white/3">
+        <h2 className="text-lg font-semibold text-gray-800 dark:text-white/90">
+          New Customers
+        </h2>
+        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div className="rounded-xl bg-gray-50 px-4 py-3 dark:bg-gray-900/50">
+            <p className="text-xs text-gray-500 dark:text-gray-400">{statsRangeLabel}</p>
+            <p className="text-xl font-semibold text-gray-800 dark:text-white/90">
+              {summary.newCustomersToday.toLocaleString()}
+            </p>
+          </div>
+          <div className="rounded-xl bg-gray-50 px-4 py-3 dark:bg-gray-900/50">
+            <p className="text-xs text-gray-500 dark:text-gray-400">Last 7 days</p>
+            <p className="text-xl font-semibold text-gray-800 dark:text-white/90">
+              {summary.newCustomersWeekly.toLocaleString()}
+            </p>
           </div>
         </div>
       </div>
 
       <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-theme-xs dark:border-gray-800 dark:bg-white/3">
         <h2 className="text-lg font-semibold text-gray-800 dark:text-white/90">Recent Orders</h2>
-        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-          Latest orders with key transaction details.
-        </p>
         <div className="mt-4 overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-800">
             <thead>
@@ -493,9 +653,6 @@ export default function RestaurantAdminSummaryCards() {
         <h2 className="text-lg font-semibold text-gray-800 dark:text-white/90">
           Top-Selling Items
         </h2>
-        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-          Ranked by quantity sold from available order line data.
-        </p>
 
         <div className="mt-4 space-y-3">
           {isLoading ? (

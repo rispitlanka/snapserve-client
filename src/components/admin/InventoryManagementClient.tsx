@@ -421,15 +421,41 @@ export default function InventoryManagementClient({
     );
   }
 
+  const sectionHeading =
+    section === "items"
+      ? "Manage Items"
+      : section === "brands"
+        ? "Manage Brands"
+        : section === "categories"
+          ? "Manage Category"
+          : section === "subCategories"
+            ? "Manage Sub Category"
+            : "Manage Inventory";
+  const sectionAction =
+    section === "items"
+      ? { label: "Add Item", onClick: openAddItemPage, disabled: false }
+      : section === "brands"
+        ? { label: "Add Brand", onClick: openBrandModal, disabled: false }
+        : section === "categories"
+          ? { label: "Add Category", onClick: openCategoryModal, disabled: false }
+          : section === "subCategories"
+            ? { label: "Add Sub-category", onClick: openSubCategoryModal, disabled: categories.length === 0 }
+            : null;
+
   return (
     <section className="space-y-6 rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/3">
-      <div>
-        <h1 className="text-2xl font-semibold text-gray-800 dark:text-white/90">Manage Inventory</h1>
-        <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-          {section === "overview"
-            ? "Overview of categories, sub-categories, brands, and inventory items."
-            : "Manage inventory data for this restaurant section."}
-        </p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <h1 className="text-2xl font-semibold text-gray-800 dark:text-white/90">{sectionHeading}</h1>
+        {sectionAction ? (
+          <Button
+            type="button"
+            size="sm"
+            onClick={sectionAction.onClick}
+            disabled={sectionAction.disabled}
+          >
+            {sectionAction.label}
+          </Button>
+        ) : null}
       </div>
 
       {error ? <p className="text-sm text-error-500">{error}</p> : null}
@@ -477,16 +503,6 @@ export default function InventoryManagementClient({
 
       {section === "categories" ? (
         <div className="space-y-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h2 className="text-lg font-semibold text-gray-800 dark:text-white/90">Categories</h2>
-              <p className="text-sm text-gray-500 dark:text-gray-400">All item categories currently available.</p>
-            </div>
-            <Button type="button" size="sm" onClick={openCategoryModal}>
-              Add Category
-            </Button>
-          </div>
-
           {categorySuccess ? <p className="text-sm text-success-600 dark:text-success-400">{categorySuccess}</p> : null}
 
           {isLoading ? (
@@ -534,16 +550,6 @@ export default function InventoryManagementClient({
 
       {section === "subCategories" ? (
         <div className="space-y-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h2 className="text-lg font-semibold text-gray-800 dark:text-white/90">Sub-categories</h2>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Sub-categories grouped under parent categories.</p>
-            </div>
-            <Button type="button" size="sm" onClick={openSubCategoryModal} disabled={categories.length === 0}>
-              Add Sub-category
-            </Button>
-          </div>
-
           {subCategorySuccess ? <p className="text-sm text-success-600 dark:text-success-400">{subCategorySuccess}</p> : null}
 
           {isLoading ? (
@@ -594,16 +600,6 @@ export default function InventoryManagementClient({
 
       {section === "brands" ? (
         <div className="space-y-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h2 className="text-lg font-semibold text-gray-800 dark:text-white/90">Brands</h2>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Brand list linked to this restaurant.</p>
-            </div>
-            <Button type="button" size="sm" onClick={openBrandModal}>
-              Add Brand
-            </Button>
-          </div>
-
           {brandSuccess ? <p className="text-sm text-success-600 dark:text-success-400">{brandSuccess}</p> : null}
 
           {isLoading ? (
@@ -651,16 +647,6 @@ export default function InventoryManagementClient({
 
       {section === "items" ? (
         <div className="space-y-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h2 className="text-lg font-semibold text-gray-800 dark:text-white/90">Inventory Items</h2>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Click on any item to view details and purchase history.</p>
-            </div>
-              <Button type="button" size="sm" onClick={openAddItemPage}>
-                Add Item
-              </Button>
-            </div>
-
             {isLoading ? (
               renderEmptyState("Loading inventory items...")
             ) : items.length === 0 ? (

@@ -402,10 +402,23 @@ export default function SuperadminDashboardClient({
   }, [adminPaged.safePage, adminPage]);
 
   const pageTitle = activeTab === "admins" ? "Manage Restaurent Admin" : "Manage Restaurent";
+  const headerActionLabel = activeTab === "admins"
+    ? (pageType === "Users" ? "Add User" : "Add Restaurant Admin")
+    : "Add Restaurant";
+  const handleHeaderAction = activeTab === "admins" ? openAdminModal : openRestaurantModal;
 
   return (
     <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/3">
-      <h1 className="text-2xl font-semibold text-gray-800 dark:text-white/90">{pageTitle}</h1>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <h1 className="text-2xl font-semibold text-gray-800 dark:text-white/90">{pageTitle}</h1>
+        <button
+          type="button"
+          onClick={handleHeaderAction}
+          className="inline-flex items-center justify-center rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600"
+        >
+          {headerActionLabel}
+        </button>
+      </div>
       {error ? <p className="mt-2 text-sm text-error-500">{error}</p> : null}
       {adminError ? <p className="mt-2 text-sm text-error-500">{adminError}</p> : null}
       {adminSuccess ? (
@@ -441,18 +454,6 @@ export default function SuperadminDashboardClient({
 
       {activeTab === "restaurants" ? (
         <section className="mt-6 space-y-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <h2 className="text-lg font-semibold text-gray-800 dark:text-white/90">
-            </h2>
-            <button
-              type="button"
-              onClick={openRestaurantModal}
-              className="inline-flex items-center justify-center rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600"
-            >
-              Add Restaurant
-            </button>
-          </div>
-
           <div className="rounded-xl border border-gray-200 p-4 dark:border-gray-800">
             <div className="mb-4">
               <input
@@ -534,16 +535,6 @@ export default function SuperadminDashboardClient({
 
       {activeTab === "admins" ? (
         <section className="mt-6 space-y-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <button
-              type="button"
-              onClick={openAdminModal}
-              className="inline-flex items-center justify-center rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600"
-            >
-              {pageType === "Users" ? "Add User" : "Add Restaurant Admin"}
-            </button>
-          </div>
-
           <div className="rounded-xl border border-gray-200 p-4 dark:border-gray-800">
             <div className="mb-4">
               <input
