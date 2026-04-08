@@ -111,6 +111,16 @@ const navItems: NavItem[] = [
     ],
     roles: ["admin"],
   },
+  {
+    icon: <GroupIcon />,
+    name: "Customers",
+    subItems: [
+      { name: "Manage Customers", path: "/manage-customers" },
+      { name: "Credit Settlement", path: "/manage-customers/credit-settlement" },
+      { name: "Cheques", path: "/manage-customers/cheques" },
+    ],
+    roles: ["admin"],
+  },
 
   // Cashier Items
   {
@@ -122,7 +132,11 @@ const navItems: NavItem[] = [
   {
     icon: <GroupIcon />,
     name: "Customers",
-    subItems: [{ name: "Manage Customers", path: "/manage-customers" }],
+    subItems: [
+      { name: "Manage Customers", path: "/manage-customers" },
+      { name: "Credit Settlement", path: "/manage-customers/credit-settlement" },
+      { name: "Cheques", path: "/manage-customers/cheques" },
+    ],
     roles: ["cashier"],
   },
   // {

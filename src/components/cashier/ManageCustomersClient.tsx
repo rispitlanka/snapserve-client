@@ -35,6 +35,7 @@ const getValue = (record: Record<string, unknown>, keys: string[]) => {
 export default function ManageCustomersClient() {
   const router = useRouter();
   const [sessionReady, setSessionReady] = useState(false);
+  const [userRole, setUserRole] = useState<"admin" | "cashier" | null>(null);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [isLoadingCustomers, setIsLoadingCustomers] = useState(false);
   const [isSavingCustomer, setIsSavingCustomer] = useState(false);
@@ -65,11 +66,12 @@ export default function ManageCustomersClient() {
         return;
       }
 
-      if (session.user.role !== "cashier") {
+      if (session.user.role !== "cashier" && session.user.role !== "admin") {
         router.replace(ROLE_DASHBOARD_ROUTE[session.user.role]);
         return;
       }
 
+      setUserRole(session.user.role);
       setSessionReady(true);
       await refreshCustomers();
     };
@@ -172,13 +174,15 @@ export default function ManageCustomersClient() {
     <div className="space-y-6 rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/3">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-semibold text-gray-800 dark:text-white/90">Manage Customers</h1>
-        <button
-          type="button"
-          onClick={openCustomerModal}
-          className="inline-flex items-center justify-center rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600"
-        >
-          Add Customer
-        </button>
+        {userRole === "cashier" ? (
+          <button
+            type="button"
+            onClick={openCustomerModal}
+            className="inline-flex items-center justify-center rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600"
+          >
+            Add Customer
+          </button>
+        ) : null}
       </div>
 
       <section className="space-y-4 rounded-xl border border-gray-200 p-4 dark:border-gray-800">
@@ -252,7 +256,11 @@ export default function ManageCustomersClient() {
         ) : null}
       </section>
 
-      <Modal isOpen={isCustomerModalOpen} onClose={closeCustomerModal} className="max-w-[560px] p-4 sm:p-6">
+      <Modal
+        isOpen={isCustomerModalOpen && userRole === "cashier"}
+        onClose={closeCustomerModal}
+        className="max-w-[560px] p-4 sm:p-6"
+      >
         <div className="space-y-5">
           <div>
             <h3 className="text-xl font-semibold text-gray-800 dark:text-white/90">Add Customer</h3>

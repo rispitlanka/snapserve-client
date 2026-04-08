@@ -419,27 +419,6 @@ export default function PurchasesClient({ section }: PurchasesClientProps) {
           {titles[section]}
         </h1>
         <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end sm:gap-4 lg:min-w-0 lg:flex-1">
-          {section === "invoice" ? (
-            <div className="flex flex-col items-end sm:items-center sm:gap-0.5">
-              <span className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                Subtotal
-              </span>
-              <span className="text-lg font-semibold tabular-nums text-gray-900 dark:text-white/90 sm:text-xl">
-                {subTotalComputed.toLocaleString(undefined, { maximumFractionDigits: 2 })}
-              </span>
-            </div>
-          ) : null}
-          {section === "invoice" ? (
-            <Button
-              type="submit"
-              form="purchases-invoice-form"
-              size="sm"
-              className="shrink-0"
-              disabled={submittingPurchase || depsLoading}
-            >
-              {submittingPurchase ? "Saving..." : "Create purchase"}
-            </Button>
-          ) : null}
           {section === "settlement" ? (
             <Button
               type="submit"
@@ -723,6 +702,22 @@ export default function PurchasesClient({ section }: PurchasesClientProps) {
                       </div>
                     </div>
                   ))}
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-gray-200 bg-gray-50/80 p-5 dark:border-gray-800 dark:bg-gray-900/20">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                      Subtotal
+                    </p>
+                    <p className="mt-1 text-xl font-semibold tabular-nums text-gray-900 dark:text-white/90">
+                      {subTotalComputed.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                    </p>
+                  </div>
+                  <Button type="submit" size="sm" disabled={submittingPurchase || depsLoading}>
+                    {submittingPurchase ? "Saving..." : "Create purchase"}
+                  </Button>
                 </div>
               </div>
             </>
