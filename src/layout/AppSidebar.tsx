@@ -14,15 +14,14 @@ import React, {
 } from "react";
 import { useSidebar } from "../context/SidebarContext";
 import {
-    // BoxCubeIcon,
-    // CalenderIcon,
     BoxCubeIcon,
-    BoxIconLine,
+    BoxIcon,
     ChevronDownIcon,
     DocsIcon,
     DollarLineIcon,
     GridIcon,
     GroupIcon,
+    MenuFoodIcon,
     PieChartIcon,
     UserIcon,
 } from "../icons/index";
@@ -89,7 +88,7 @@ const navItems: NavItem[] = [
     roles: ["admin"],
   },
   {
-    icon: <BoxIconLine />,
+    icon: <BoxIcon />,
     name: "Inventory",
     subItems: [
       { name: "Overview", path: "/manage-inventory" },
@@ -111,7 +110,7 @@ const navItems: NavItem[] = [
     roles: ["admin"],
   },
   {
-    icon: <BoxIconLine />,
+    icon: <MenuFoodIcon />,
     name: "Menu",
     subItems: [
       { name: "Menu List", path: "/manage-menu/list" },
@@ -288,9 +287,32 @@ const AppSidebar: React.FC = () => {
 
         const navIsActive = Boolean(nav.path) && isPrimaryRouteMatch && isActive(nav.path as string);
 
+        const subMenuActive =
+          Boolean(nav.subItems) &&
+          nav.subItems!.some((subItem) => isActive(subItem.path));
+        const collapsedDefaultPath = nav.subItems?.[0]?.path;
+
         return (
         <li key={nav.name}>
           {nav.subItems ? (
+            !isExpanded && !isMobileOpen && collapsedDefaultPath ? (
+              <Link
+                href={collapsedDefaultPath}
+                className={`menu-item group ${
+                  subMenuActive ? "menu-item-active" : "menu-item-inactive"
+                } lg:justify-center`}
+                aria-label={nav.name}
+                title={nav.name}
+              >
+                <span
+                  className={
+                    subMenuActive ? "menu-item-icon-active" : "menu-item-icon-inactive"
+                  }
+                >
+                  {nav.icon}
+                </span>
+              </Link>
+            ) : (
             <button
               onClick={() => handleSubmenuToggle(index, menuType)}
               className={`menu-item group  ${
@@ -328,6 +350,7 @@ const AppSidebar: React.FC = () => {
                 />
               )}
             </button>
+            )
           ) : (
             nav.path && (
               <Link

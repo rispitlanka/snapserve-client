@@ -1,7 +1,7 @@
 "use client";
 
 import MetricCard from "@/components/common/MetricCard";
-import { ArrowUpIcon, BoxCubeIcon, DollarLineIcon, GroupIcon, PieChartIcon } from "@/icons";
+import { ArrowUpIcon, BoxCubeIcon, DollarLineIcon, GroupIcon, PendingIcon, PieChartIcon } from "@/icons";
 import type { DashboardSummary } from "@/lib/auth";
 import { ROLE_DASHBOARD_ROUTE, getAuthSession, listRestaurantAdmins, listRestaurants } from "@/lib/auth";
 import { useRouter } from "next/navigation";
@@ -173,7 +173,7 @@ export default function SuperadminSummaryCards() {
         <MetricCard
           title="Pending Subscriptions"
           value={summary.pendingSubscriptions.toLocaleString()}
-          icon={<GroupIcon className="size-6 text-warning-600 dark:text-warning-400" />}
+          icon={<PendingIcon className="size-6 text-warning-600 dark:text-warning-400" />}
           accentClassName="bg-warning-50 dark:bg-warning-500/10"
           isLoading={isLoading}
         />

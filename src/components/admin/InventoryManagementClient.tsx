@@ -7,7 +7,7 @@ import Label from "@/components/form/Label";
 import Button from "@/components/ui/button/Button";
 import { Modal } from "@/components/ui/modal";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
-import { BoxCubeIcon, FolderIcon, GroupIcon, TableIcon } from "@/icons";
+import { BrandIcon, FolderIcon, SubcategoryIcon, TableIcon } from "@/icons";
 import { getAuthSession, ROLE_DASHBOARD_ROUTE } from "@/lib/auth";
 import type {
   InventoryBrand,
@@ -681,7 +681,7 @@ export default function InventoryManagementClient({
             title="Sub-categories"
             value={activeCounts.subCategories.toLocaleString()}
             description="Nested category groups"
-            icon={<GroupIcon className="size-6 text-success-600 dark:text-success-400" />}
+            icon={<SubcategoryIcon className="size-6 text-success-600 dark:text-success-400" />}
             accentClassName="bg-success-50 dark:bg-success-500/10"
             isLoading={isLoading}
             href="/manage-inventory/sub-categories"
@@ -690,7 +690,7 @@ export default function InventoryManagementClient({
             title="Brands"
             value={activeCounts.brands.toLocaleString()}
             description="Inventory brands configured"
-            icon={<BoxCubeIcon className="size-6 text-warning-600 dark:text-warning-400" />}
+            icon={<BrandIcon className="size-6 text-warning-600 dark:text-warning-400" />}
             accentClassName="bg-warning-50 dark:bg-warning-500/10"
             isLoading={isLoading}
             href="/manage-inventory/brands"

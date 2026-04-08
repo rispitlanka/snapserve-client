@@ -37,7 +37,13 @@ import PageviewRoundedIcon from "@mui/icons-material/PageviewRounded";
 import PieChartOutlineRoundedIcon from "@mui/icons-material/PieChartOutlineRounded";
 import PlayCircleOutlineRoundedIcon from "@mui/icons-material/PlayCircleOutlineRounded";
 import SendRoundedIcon from "@mui/icons-material/SendRounded";
-import SmartToyRoundedIcon from "@mui/icons-material/SmartToyRounded";
+import AccountTreeRoundedIcon from "@mui/icons-material/AccountTreeRounded";
+import HandshakeRoundedIcon from "@mui/icons-material/HandshakeRounded";
+import PendingActionsRoundedIcon from "@mui/icons-material/PendingActionsRounded";
+import ReceiptLongRoundedIcon from "@mui/icons-material/ReceiptLongRounded";
+import RestaurantMenuRoundedIcon from "@mui/icons-material/RestaurantMenuRounded";
+import StorefrontRoundedIcon from "@mui/icons-material/StorefrontRounded";
+import StyleRoundedIcon from "@mui/icons-material/StyleRounded";
 import TableChartRoundedIcon from "@mui/icons-material/TableChartRounded";
 import TaskAltRoundedIcon from "@mui/icons-material/TaskAltRounded";
 import TimerRoundedIcon from "@mui/icons-material/TimerRounded";
@@ -96,7 +102,20 @@ const ListIcon = ListRoundedIcon;
 const TableIcon = TableChartRoundedIcon;
 const PageIcon = PageviewRoundedIcon;
 const PieChartIcon = PieChartOutlineRoundedIcon;
-const BoxCubeIcon = SmartToyRoundedIcon;
+/** Store / venue — used for restaurants, locations (not inventory “box”). */
+const BoxCubeIcon = StorefrontRoundedIcon;
+/** Food menu — sidebar “Menu” section (categories, items, variants, add-ons). */
+const MenuFoodIcon = RestaurantMenuRoundedIcon;
+/** Product brands / labels */
+const BrandIcon = StyleRoundedIcon;
+/** Vendor / partnership */
+const SupplierIcon = HandshakeRoundedIcon;
+/** Category hierarchy */
+const SubcategoryIcon = AccountTreeRoundedIcon;
+/** Awaiting action / queue */
+const PendingIcon = PendingActionsRoundedIcon;
+/** Orders & receipts */
+const ReceiptIcon = ReceiptLongRoundedIcon;
 const PlugInIcon = TuneRoundedIcon;
 const DocsIcon = DescriptionRoundedIcon;
 const MailIcon = MailOutlineRoundedIcon;
@@ -153,7 +172,13 @@ export {
   TaskIcon,
   PieChartIcon,
   BoxCubeIcon,
+  BrandIcon,
+  MenuFoodIcon,
+  PendingIcon,
   PlugInIcon,
+  ReceiptIcon,
+  SubcategoryIcon,
+  SupplierIcon,
   DocsIcon,
   MailIcon,
   HorizontaLDots,
