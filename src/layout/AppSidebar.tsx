@@ -114,8 +114,8 @@ const navItems: NavItem[] = [
     icon: <BoxIconLine />,
     name: "Menu",
     subItems: [
-      { name: "Menu Category", path: "/manage-menu/category" },
       { name: "Menu List", path: "/manage-menu/list" },
+      { name: "Category", path: "/manage-menu/category" },
       { name: "Variant", path: "/manage-menu/variant" },
       { name: "Add On", path: "/manage-menu/add-on" },
     ],
