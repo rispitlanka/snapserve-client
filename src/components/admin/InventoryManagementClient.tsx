@@ -98,6 +98,15 @@ export default function InventoryManagementClient({
   const [subCategorySuccess, setSubCategorySuccess] = useState("");
   const [brandSuccess, setBrandSuccess] = useState("");
 
+  // Kept for flow control and toast messaging without inline banners.
+  void error;
+  void categoryError;
+  void subCategoryError;
+  void brandError;
+  void categorySuccess;
+  void subCategorySuccess;
+  void brandSuccess;
+
   const [categoryPage, setCategoryPage] = useState(1);
   const [categoryPageSize, setCategoryPageSize] = useState(10);
   const [subCategoryPage, setSubCategoryPage] = useState(1);
@@ -380,7 +389,7 @@ export default function InventoryManagementClient({
   };
 
   const openAddItemPage = () => {
-    router.push("/manage-inventory-items/add");
+    router.push("/manage-inventory/items/add");
   };
 
   const openItemDetailModal = (itemId?: string) => {
@@ -666,7 +675,7 @@ export default function InventoryManagementClient({
             icon={<FolderIcon className="size-6 text-brand-600 dark:text-brand-400" />}
             accentClassName="bg-brand-50 dark:bg-brand-500/10"
             isLoading={isLoading}
-            href="/manage-inventory-categories"
+            href="/manage-inventory/categories"
           />
           <MetricCard
             title="Sub-categories"
@@ -675,7 +684,7 @@ export default function InventoryManagementClient({
             icon={<GroupIcon className="size-6 text-success-600 dark:text-success-400" />}
             accentClassName="bg-success-50 dark:bg-success-500/10"
             isLoading={isLoading}
-            href="/manage-inventory-sub-categories"
+            href="/manage-inventory/sub-categories"
           />
           <MetricCard
             title="Brands"
@@ -684,7 +693,7 @@ export default function InventoryManagementClient({
             icon={<BoxCubeIcon className="size-6 text-warning-600 dark:text-warning-400" />}
             accentClassName="bg-warning-50 dark:bg-warning-500/10"
             isLoading={isLoading}
-            href="/manage-inventory-brands"
+            href="/manage-inventory/brands"
           />
           <MetricCard
             title="Items"
@@ -693,7 +702,7 @@ export default function InventoryManagementClient({
             icon={<TableIcon className="size-6 text-indigo-600 dark:text-indigo-400" />}
             accentClassName="bg-indigo-50 dark:bg-indigo-500/10"
             isLoading={isLoading}
-            href="/manage-inventory-items"
+            href="/manage-inventory/items"
           />
         </div>
       ) : null}

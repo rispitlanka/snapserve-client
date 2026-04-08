@@ -23,7 +23,6 @@ import {
     DollarLineIcon,
     GridIcon,
     GroupIcon,
-    HorizontaLDots,
     PieChartIcon,
     UserIcon,
 } from "../icons/index";
@@ -94,10 +93,10 @@ const navItems: NavItem[] = [
     name: "Inventory",
     subItems: [
       { name: "Overview", path: "/manage-inventory" },
-      { name: "Items", path: "/manage-inventory-items" },
-      { name: "Brands", path: "/manage-inventory-brands" },
-      { name: "Categories", path: "/manage-inventory-categories" },
-      { name: "Sub-categories", path: "/manage-inventory-sub-categories" },
+      { name: "Items", path: "/manage-inventory/items" },
+      { name: "Brands", path: "/manage-inventory/brands" },
+      { name: "Categories", path: "/manage-inventory/categories" },
+      { name: "Sub-categories", path: "/manage-inventory/sub-categories" },
     ],
     roles: ["admin"],
   },
@@ -108,6 +107,17 @@ const navItems: NavItem[] = [
       { name: "Summary", path: "/manage-purchases/summary" },
       { name: "Invoice", path: "/manage-purchases/invoice" },
       { name: "Settlement", path: "/manage-purchases/settlement" },
+    ],
+    roles: ["admin"],
+  },
+  {
+    icon: <BoxIconLine />,
+    name: "Menu",
+    subItems: [
+      { name: "Menu Category", path: "/manage-menu/category" },
+      { name: "Menu List", path: "/manage-menu/list" },
+      { name: "Variant", path: "/manage-menu/variant" },
+      { name: "Add On", path: "/manage-menu/add-on" },
     ],
     roles: ["admin"],
   },
@@ -427,7 +437,13 @@ const AppSidebar: React.FC = () => {
     return { type: "main" as const, index };
   }, [pathname, visibleNavItems]);
 
-  const resolvedOpenSubmenu = openSubmenu ?? activeSubmenu;
+  const resolvedOpenSubmenu = openSubmenu;
+
+  useEffect(() => {
+    // Keep current route's submenu open on navigation,
+    // while still allowing manual collapse/expand on click.
+    setOpenSubmenu(activeSubmenu);
+  }, [activeSubmenu]);
 
   useEffect(() => {
     // Measure submenu height for both explicitly opened menus and auto-opened active route menus.

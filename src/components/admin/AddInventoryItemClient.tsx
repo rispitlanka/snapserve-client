@@ -355,7 +355,7 @@ export default function AddInventoryItemClient() {
       });
 
       toast.success("Inventory item created successfully.");
-      router.push("/manage-inventory-items");
+      router.push("/manage-inventory/items");
     } catch (err) {
       const message =
         err instanceof Error ? err.message : "Failed to create inventory item.";
