@@ -657,8 +657,6 @@ export default function InventoryManagementClient({
         </div>
       </div>
 
-      {error ? <p className="text-sm text-error-500">{error}</p> : null}
-
       {section === "overview" ? (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <MetricCard
@@ -702,8 +700,6 @@ export default function InventoryManagementClient({
 
       {section === "categories" ? (
         <div className="space-y-4">
-          {categorySuccess ? <p className="text-sm text-success-600 dark:text-success-400">{categorySuccess}</p> : null}
-
           {isLoading ? (
             renderEmptyState("Loading categories...")
           ) : categories.length === 0 ? (
@@ -745,8 +741,6 @@ export default function InventoryManagementClient({
 
       {section === "subCategories" ? (
         <div className="space-y-4">
-          {subCategorySuccess ? <p className="text-sm text-success-600 dark:text-success-400">{subCategorySuccess}</p> : null}
-
           {isLoading ? (
             renderEmptyState("Loading sub-categories...")
           ) : subCategories.length === 0 ? (
@@ -792,8 +786,6 @@ export default function InventoryManagementClient({
 
       {section === "brands" ? (
         <div className="space-y-4">
-          {brandSuccess ? <p className="text-sm text-success-600 dark:text-success-400">{brandSuccess}</p> : null}
-
           {isLoading ? (
             renderEmptyState("Loading brands...")
           ) : brands.length === 0 ? (
@@ -898,8 +890,6 @@ export default function InventoryManagementClient({
             <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Create a new inventory category.</p>
           </div>
 
-          {categoryError ? <p className="text-sm text-error-500">{categoryError}</p> : null}
-
           <form className="space-y-4" onSubmit={handleCategorySave}>
             <div>
               <Label htmlFor="category-name">Name</Label>
@@ -926,8 +916,6 @@ export default function InventoryManagementClient({
             <h3 className="text-xl font-semibold text-gray-800 dark:text-white/90">Add Sub-category</h3>
             <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Create a new inventory sub-category.</p>
           </div>
-
-          {subCategoryError ? <p className="text-sm text-error-500">{subCategoryError}</p> : null}
 
           <form className="space-y-4" onSubmit={handleSubCategorySave}>
             <div>
@@ -970,8 +958,6 @@ export default function InventoryManagementClient({
             <h3 className="text-xl font-semibold text-gray-800 dark:text-white/90">Add Brand</h3>
             <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Create a new inventory brand.</p>
           </div>
-
-          {brandError ? <p className="text-sm text-error-500">{brandError}</p> : null}
 
           <form className="space-y-4" onSubmit={handleBrandSave}>
             <div>
@@ -1062,7 +1048,7 @@ export default function InventoryManagementClient({
           {isItemDetailLoading ? (
             renderEmptyState("Loading item details...")
           ) : itemDetailError ? (
-            <p className="text-sm text-error-500">{itemDetailError}</p>
+            renderEmptyState(itemDetailError)
           ) : selectedItem ? (
             <>
               <div className="space-y-3">

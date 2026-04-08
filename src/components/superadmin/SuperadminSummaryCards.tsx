@@ -6,6 +6,7 @@ import type { DashboardSummary } from "@/lib/auth";
 import { ROLE_DASHBOARD_ROUTE, getAuthSession, listRestaurantAdmins, listRestaurants } from "@/lib/auth";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import toast from "react-hot-toast";
 
 const toList = (rawData: unknown): Array<Record<string, unknown>> => {
   if (Array.isArray(rawData)) return rawData as Array<Record<string, unknown>>;
@@ -48,7 +49,6 @@ export default function SuperadminSummaryCards() {
     pendingPayments: 0,
   });
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState("");
 
   useEffect(() => {
     const loadSummary = async () => {
@@ -64,7 +64,6 @@ export default function SuperadminSummaryCards() {
       }
 
       setIsLoading(true);
-      setError("");
 
       try {
         const [restaurantsRaw, adminsRaw] = await Promise.all([
@@ -95,7 +94,7 @@ export default function SuperadminSummaryCards() {
           pendingPayments: Math.floor(restaurants.length * 0.25),
         });
       } catch (err) {
-        setError(
+        toast.error(
           err instanceof Error
             ? err.message
             : "Failed to load dashboard summary."
@@ -115,8 +114,6 @@ export default function SuperadminSummaryCards() {
           Superadmin Dashboard
         </h1>
       </div>
-
-      {error ? <p className="text-sm text-error-500">{error}</p> : null}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <MetricCard

@@ -119,6 +119,12 @@ const navItems: NavItem[] = [
     path: "/cashier-dashboard",
     roles: ["cashier"],
   },
+  {
+    icon: <GroupIcon />,
+    name: "Customers",
+    subItems: [{ name: "Manage Customers", path: "/manage-customers" }],
+    roles: ["cashier"],
+  },
   // {
   //   icon: <CalenderIcon />,
   //   name: "Calendar",
@@ -475,22 +481,7 @@ const AppSidebar: React.FC = () => {
       <div className="flex h-full flex-col overflow-y-auto duration-300 ease-linear no-scrollbar">
         <nav className="mb-6">
           <div className="flex flex-col gap-4">
-            <div>
-              <h2
-                className={`mb-4 text-xs uppercase flex leading-5 text-gray-400 ${
-                  !isExpanded && !isMobileOpen
-                    ? "lg:justify-center"
-                    : "justify-start"
-                }`}
-              >
-                {isExpanded || isMobileOpen ? (
-                  "Menu"
-                ) : (
-                  <HorizontaLDots />
-                )}
-              </h2>
-              {renderMenuItems(visibleNavItems, "main")}
-            </div>
+            <div>{renderMenuItems(visibleNavItems, "main")}</div>
 
             {/* <div className="">
               <h2

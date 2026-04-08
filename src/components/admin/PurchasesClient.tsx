@@ -168,7 +168,7 @@ export default function PurchasesClient({ section }: PurchasesClientProps) {
 
   const [settlementPurchaseId, setSettlementPurchaseId] = useState("");
   const [settlementAmount, setSettlementAmount] = useState("");
-  const [settlementMethod, setSettlementMethod] = useState("CASH");
+  const [settlementMethod, setSettlementMethod] = useState<string>("CASH");
   const [settlementNote, setSettlementNote] = useState("");
   const [submittingSettlement, setSubmittingSettlement] = useState(false);
 
@@ -402,6 +402,7 @@ export default function PurchasesClient({ section }: PurchasesClientProps) {
   }, [purchases]);
 
   const settlementOptions = creditCandidates.length > 0 ? creditCandidates : purchases;
+  const settlementMethods = PAYMENT_METHODS.filter((m) => m !== "CREDIT");
 
   if (!sessionReady) {
     return (
@@ -452,8 +453,6 @@ export default function PurchasesClient({ section }: PurchasesClientProps) {
           ) : null}
         </div>
       </div>
-
-      {error ? <p className="text-sm text-error-500">{error}</p> : null}
 
       {section === "summary" ? (
         <div className="space-y-4">
@@ -790,7 +789,7 @@ export default function PurchasesClient({ section }: PurchasesClientProps) {
                       onChange={(e) => setSettlementMethod(e.target.value)}
                       className={invoiceSelectClass}
                     >
-                      {PAYMENT_METHODS.map((m) => (
+                      {settlementMethods.map((m) => (
                         <option key={m} value={m}>
                           {m}
                         </option>
