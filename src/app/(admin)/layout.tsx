@@ -6,7 +6,7 @@ import AppSidebar from "@/layout/AppSidebar";
 import Backdrop from "@/layout/Backdrop";
 import { clearAuthSession, getAuthSession, UserRole } from "@/lib/auth";
 import { usePathname, useRouter } from "next/navigation";
-import React, { useEffect } from "react";
+import React, { useCallback, useEffect, useSyncExternalStore } from "react";
 
 export default function AdminLayout({
   children,
@@ -16,20 +16,36 @@ export default function AdminLayout({
   const router = useRouter();
   const pathname = usePathname();
   const { isExpanded, isMobileOpen } = useSidebar();
+  const subscribeToSession = useCallback(() => {
+    return () => {
+      // No-op subscription. We only need a hydration-safe snapshot.
+    };
+  }, []);
+
+  const roleSnapshot = useSyncExternalStore<string>(
+    subscribeToSession,
+    () => getAuthSession()?.user?.role ?? "",
+    () => ""
+  );
+
+  const allowedRoles: UserRole[] = ["superadmin", "admin", "cashier"];
+  const isAuthorized = Boolean(roleSnapshot && allowedRoles.includes(roleSnapshot as UserRole));
 
   useEffect(() => {
-    const session = getAuthSession();
-    if (!session) {
+    if (!roleSnapshot) {
       router.replace("/signin");
       return;
     }
 
-    const allowedRoles: UserRole[] = ["superadmin", "admin", "cashier"];
-    if (!session.user?.role || !allowedRoles.includes(session.user.role)) {
+    if (!isAuthorized) {
       clearAuthSession();
       router.replace("/signin");
     }
-  }, [pathname, router]);
+  }, [isAuthorized, pathname, roleSnapshot, router]);
+
+  if (!isAuthorized) {
+    return null;
+  }
 
   // Dynamic class for main content margin based on sidebar state
   const mainContentMargin = isMobileOpen

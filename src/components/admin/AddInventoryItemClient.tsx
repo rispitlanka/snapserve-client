@@ -18,6 +18,7 @@ import {
   createInventorySubCategory,
   listInventoryBrands,
   listInventoryCategories,
+  listInventoryItems,
   listInventorySubCategories,
 } from "@/lib/inventory";
 import { useRouter } from "next/navigation";
@@ -50,6 +51,44 @@ const emptyCategoryCreateForm: CategoryCreateFormState = { name: "" };
 const emptySubCategoryCreateForm: SubCategoryCreateFormState = { name: "", categoryId: "" };
 const emptyBrandCreateForm: BrandCreateFormState = { name: "" };
 
+const detectUnitFromName = (name: string): "KG" | "L" | "PCS" => {
+  const value = name.trim().toLowerCase();
+  if (!value) return "PCS";
+
+  const liquidKeywords = ["milk", "oil", "juice", "water", "syrup", "drink", "beverage", "litre", "liter"];
+  const weightKeywords = [
+    "rice",
+    "flour",
+    "sugar",
+    "salt",
+    "meat",
+    "beef",
+    "chicken",
+    "fish",
+    "fruit",
+    "vegetable",
+    "veg",
+    "kg",
+    "kilo",
+    "kilogram",
+  ];
+
+  const tokens = value.split(/[^a-z]+/).filter(Boolean);
+
+  const matchesKeyword = (keywords: string[]) =>
+    keywords.some(
+      (word) =>
+        value.includes(word) ||
+        tokens.some((token) => word.startsWith(token) || token.startsWith(word))
+    );
+
+  // Match anywhere in the phrase, while still supporting early typing.
+  if (matchesKeyword(liquidKeywords)) return "L";
+  if (matchesKeyword(weightKeywords)) return "KG";
+
+  return "PCS";
+};
+
 export default function AddInventoryItemClient() {
   const router = useRouter();
   const [sessionReady, setSessionReady] = useState(false);
@@ -63,15 +102,11 @@ export default function AddInventoryItemClient() {
   const [isCreatingCategory, setIsCreatingCategory] = useState(false);
   const [isCreatingSubCategory, setIsCreatingSubCategory] = useState(false);
   const [isCreatingBrand, setIsCreatingBrand] = useState(false);
+  const [existingItemNames, setExistingItemNames] = useState<string[]>([]);
   const [itemForm, setItemForm] = useState<ItemFormState>(emptyItemForm);
   const [categoryCreateForm, setCategoryCreateForm] = useState<CategoryCreateFormState>(emptyCategoryCreateForm);
   const [subCategoryCreateForm, setSubCategoryCreateForm] = useState<SubCategoryCreateFormState>(emptySubCategoryCreateForm);
   const [brandCreateForm, setBrandCreateForm] = useState<BrandCreateFormState>(emptyBrandCreateForm);
-  const [itemError, setItemError] = useState("");
-  const [itemSuccess, setItemSuccess] = useState("");
-  const [categoryCreateError, setCategoryCreateError] = useState("");
-  const [subCategoryCreateError, setSubCategoryCreateError] = useState("");
-  const [brandCreateError, setBrandCreateError] = useState("");
 
   const getScopedAdminSession = useCallback(() => {
     const session = getAuthSession();
@@ -86,7 +121,7 @@ export default function AddInventoryItemClient() {
     }
 
     if (!session.user.restaurantId) {
-      setItemError("Invalid session scope. Please sign in again.");
+      toast.error("Invalid session scope. Please sign in again.");
       router.replace("/signin");
       return null;
     }
@@ -102,18 +137,26 @@ export default function AddInventoryItemClient() {
       }
 
       setSessionReady(true);
-      setItemError("");
-
       try {
-        const [categoryList, subCategoryList, brandList] = await Promise.all([
+        const [categoryList, subCategoryList, brandList, existingItems] = await Promise.all([
           listInventoryCategories(session.accessToken),
           listInventorySubCategories(session.accessToken),
           listInventoryBrands(session.accessToken),
+          listInventoryItems(session.accessToken),
         ]);
 
         setCategories(categoryList);
         setSubCategories(subCategoryList);
         setBrands(brandList);
+        setExistingItemNames(
+          Array.from(
+            new Set(
+              existingItems
+                .map((item) => item.name?.trim())
+                .filter((name): name is string => Boolean(name))
+            )
+          )
+        );
 
         const defaultCategoryId = categoryList[0]?.id ?? "";
         const defaultSubCategoryId =
@@ -130,7 +173,7 @@ export default function AddInventoryItemClient() {
           expiryDate: "",
         });
       } catch (err) {
-        setItemError(err instanceof Error ? err.message : "Failed to load inventory data.");
+        toast.error(err instanceof Error ? err.message : "Failed to load inventory data.");
       }
     };
 
@@ -142,14 +185,20 @@ export default function AddInventoryItemClient() {
     return subCategories.filter((subCategory) => subCategory.categoryId === itemForm.categoryId);
   }, [itemForm.categoryId, subCategories]);
 
+  const itemNameSuggestions = useMemo(() => {
+    const query = itemForm.name.trim().toLowerCase();
+    if (!query) return [];
+    return existingItemNames
+      .filter((name) => name.toLowerCase().includes(query))
+      .slice(0, 8);
+  }, [existingItemNames, itemForm.name]);
+
   const openCategoryModal = () => {
-    setCategoryCreateError("");
     setCategoryCreateForm(emptyCategoryCreateForm);
     setIsCategoryModalOpen(true);
   };
 
   const openSubCategoryModal = () => {
-    setSubCategoryCreateError("");
     setSubCategoryCreateForm({
       name: "",
       categoryId: itemForm.categoryId || categories[0]?.id || "",
@@ -158,24 +207,21 @@ export default function AddInventoryItemClient() {
   };
 
   const openBrandModal = () => {
-    setBrandCreateError("");
     setBrandCreateForm(emptyBrandCreateForm);
     setIsBrandModalOpen(true);
   };
 
   const handleCreateCategory = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setCategoryCreateError("");
-
     const name = categoryCreateForm.name.trim();
     if (!name) {
-      setCategoryCreateError("Category name is required.");
+      toast.error("Category name is required.");
       return;
     }
 
     const session = getScopedAdminSession();
     if (!session) {
-      setCategoryCreateError("Session not found. Please sign in again.");
+      toast.error("Session not found. Please sign in again.");
       return;
     }
 
@@ -191,7 +237,7 @@ export default function AddInventoryItemClient() {
       setIsCategoryModalOpen(false);
       toast.success("Category created.");
     } catch (err) {
-      setCategoryCreateError(err instanceof Error ? err.message : "Failed to create category.");
+      toast.error(err instanceof Error ? err.message : "Failed to create category.");
     } finally {
       setIsCreatingCategory(false);
     }
@@ -199,22 +245,20 @@ export default function AddInventoryItemClient() {
 
   const handleCreateSubCategory = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setSubCategoryCreateError("");
-
     const name = subCategoryCreateForm.name.trim();
     if (!name) {
-      setSubCategoryCreateError("Sub-category name is required.");
+      toast.error("Sub-category name is required.");
       return;
     }
 
     if (!subCategoryCreateForm.categoryId) {
-      setSubCategoryCreateError("Category is required.");
+      toast.error("Category is required.");
       return;
     }
 
     const session = getScopedAdminSession();
     if (!session) {
-      setSubCategoryCreateError("Session not found. Please sign in again.");
+      toast.error("Session not found. Please sign in again.");
       return;
     }
 
@@ -233,7 +277,7 @@ export default function AddInventoryItemClient() {
       setIsSubCategoryModalOpen(false);
       toast.success("Sub-category created.");
     } catch (err) {
-      setSubCategoryCreateError(err instanceof Error ? err.message : "Failed to create sub-category.");
+      toast.error(err instanceof Error ? err.message : "Failed to create sub-category.");
     } finally {
       setIsCreatingSubCategory(false);
     }
@@ -241,17 +285,15 @@ export default function AddInventoryItemClient() {
 
   const handleCreateBrand = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setBrandCreateError("");
-
     const name = brandCreateForm.name.trim();
     if (!name) {
-      setBrandCreateError("Brand name is required.");
+      toast.error("Brand name is required.");
       return;
     }
 
     const session = getScopedAdminSession();
     if (!session) {
-      setBrandCreateError("Session not found. Please sign in again.");
+      toast.error("Session not found. Please sign in again.");
       return;
     }
 
@@ -263,7 +305,7 @@ export default function AddInventoryItemClient() {
       setIsBrandModalOpen(false);
       toast.success("Brand created.");
     } catch (err) {
-      setBrandCreateError(err instanceof Error ? err.message : "Failed to create brand.");
+      toast.error(err instanceof Error ? err.message : "Failed to create brand.");
     } finally {
       setIsCreatingBrand(false);
     }
@@ -271,46 +313,33 @@ export default function AddInventoryItemClient() {
 
   const handleItemSave = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setItemError("");
-    setItemSuccess("");
-
     const trimmedName = itemForm.name.trim();
     const trimmedUnit = itemForm.unit.trim();
     const trimmedExpiryDate = itemForm.expiryDate.trim();
 
     if (!trimmedName) {
-      setItemError("Item name is required.");
+      toast.error("Item name is required.");
       return;
     }
 
     if (!itemForm.categoryId) {
-      setItemError("Category is required.");
-      return;
-    }
-
-    if (!itemForm.subCategoryId) {
-      setItemError("Sub-category is required.");
+      toast.error("Category is required.");
       return;
     }
 
     if (!itemForm.brandId) {
-      setItemError("Brand is required.");
+      toast.error("Brand is required.");
       return;
     }
 
     if (!trimmedUnit) {
-      setItemError("Unit is required.");
-      return;
-    }
-
-    if (!trimmedExpiryDate) {
-      setItemError("Expiry date is required.");
+      toast.error("Unit is required.");
       return;
     }
 
     const session = getScopedAdminSession();
     if (!session) {
-      setItemError("Session not found. Please sign in again.");
+      toast.error("Session not found. Please sign in again.");
       return;
     }
 
@@ -319,19 +348,17 @@ export default function AddInventoryItemClient() {
       await createInventoryItem(session.accessToken, {
         name: trimmedName,
         categoryId: itemForm.categoryId,
-        subCategoryId: itemForm.subCategoryId,
+        ...(itemForm.subCategoryId ? { subCategoryId: itemForm.subCategoryId } : {}),
         brandId: itemForm.brandId,
         unit: trimmedUnit,
-        expiryDate: trimmedExpiryDate,
+        ...(trimmedExpiryDate ? { expiryDate: trimmedExpiryDate } : {}),
       });
 
-      setItemSuccess("Inventory item created successfully.");
       toast.success("Inventory item created successfully.");
-      router.push("/manage-inventory-items");
+      router.push("/manage-inventory/items");
     } catch (err) {
       const message =
         err instanceof Error ? err.message : "Failed to create inventory item.";
-      setItemError(message);
       toast.error(message);
     } finally {
       setIsCreatingItem(false);
@@ -372,13 +399,6 @@ export default function AddInventoryItemClient() {
       </div>
 
       <div className="w-full">
-        {itemError ? (
-          <p className="mb-4 text-sm text-error-500">{itemError}</p>
-        ) : null}
-        {itemSuccess ? (
-          <p className="mb-4 text-sm text-success-600 dark:text-success-400">{itemSuccess}</p>
-        ) : null}
-
         <form
           className="space-y-6 rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900/40 sm:p-6"
           onSubmit={handleItemSave}
@@ -388,11 +408,29 @@ export default function AddInventoryItemClient() {
             <Input
               id="item-name"
               type="text"
+              list="inventory-item-name-suggestions"
+              autoComplete="off"
               value={itemForm.name}
-              onChange={(event) => setItemForm((current) => ({ ...current, name: event.target.value }))}
+              onChange={(event) =>
+                setItemForm((current) => {
+                  const nextName = event.target.value;
+                  return {
+                    ...current,
+                    name: nextName,
+                    unit: detectUnitFromName(nextName),
+                  };
+                })
+              }
               placeholder="Enter inventory item name"
               className={inputClass}
             />
+            {itemNameSuggestions.length > 0 ? (
+              <datalist id="inventory-item-name-suggestions">
+                {itemNameSuggestions.map((name) => (
+                  <option key={name} value={name} />
+                ))}
+              </datalist>
+            ) : null}
           </div>
 
           <div className="grid grid-cols-1 gap-5 md:grid-cols-2 md:gap-6 xl:grid-cols-3">
@@ -446,7 +484,7 @@ export default function AddInventoryItemClient() {
                   onChange={(event) => setItemForm((current) => ({ ...current, subCategoryId: event.target.value }))}
                   className={selectClass}
                 >
-                  <option value="" disabled>Select sub-category</option>
+                  <option value="">No sub-category</option>
                   {filteredSubCategories.map((subCategory) => (
                     <option key={subCategory.id} value={subCategory.id}>{subCategory.name}</option>
                   ))}
@@ -484,17 +522,14 @@ export default function AddInventoryItemClient() {
 
           <div className="grid grid-cols-1 gap-5 md:grid-cols-2 md:gap-6">
             <div>
-              <Label htmlFor="item-unit" className={fieldLabelClass}>Unit</Label>
-              <select
+              <Label htmlFor="item-unit" className={fieldLabelClass}>Type (Auto-detected)</Label>
+              <input
                 id="item-unit"
+                type="text"
                 value={itemForm.unit}
-                onChange={(event) => setItemForm((current) => ({ ...current, unit: event.target.value }))}
-                className={selectClass}
-              >
-                <option value="KG">KG</option>
-                <option value="L">L</option>
-                <option value="PCS">PCS</option>
-              </select>
+                readOnly
+                className={`h-11 w-full rounded-lg border border-gray-300 bg-gray-50 px-4 py-2.5 text-sm text-gray-700 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 ${inputClass}`}
+              />
             </div>
           </div>
 
@@ -543,8 +578,6 @@ export default function AddInventoryItemClient() {
             <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Create a category without leaving this page.</p>
           </div>
 
-          {categoryCreateError ? <p className="text-sm text-error-500">{categoryCreateError}</p> : null}
-
           <form className="space-y-3" onSubmit={handleCreateCategory}>
             <div>
               <Label htmlFor="new-category-name">Name</Label>
@@ -576,8 +609,6 @@ export default function AddInventoryItemClient() {
             <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">Add Sub-category</h3>
             <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Create a sub-category and link it to a category.</p>
           </div>
-
-          {subCategoryCreateError ? <p className="text-sm text-error-500">{subCategoryCreateError}</p> : null}
 
           <form className="space-y-3" onSubmit={handleCreateSubCategory}>
             <div>
@@ -625,8 +656,6 @@ export default function AddInventoryItemClient() {
             <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">Add Brand</h3>
             <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Create a brand without leaving this page.</p>
           </div>
-
-          {brandCreateError ? <p className="text-sm text-error-500">{brandCreateError}</p> : null}
 
           <form className="space-y-3" onSubmit={handleCreateBrand}>
             <div>

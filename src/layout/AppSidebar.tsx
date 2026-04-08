@@ -23,7 +23,6 @@ import {
     DollarLineIcon,
     GridIcon,
     GroupIcon,
-    HorizontaLDots,
     PieChartIcon,
     UserIcon,
 } from "../icons/index";
@@ -94,10 +93,10 @@ const navItems: NavItem[] = [
     name: "Inventory",
     subItems: [
       { name: "Overview", path: "/manage-inventory" },
-      { name: "Items", path: "/manage-inventory-items" },
-      { name: "Brands", path: "/manage-inventory-brands" },
-      { name: "Categories", path: "/manage-inventory-categories" },
-      { name: "Sub-categories", path: "/manage-inventory-sub-categories" },
+      { name: "Items", path: "/manage-inventory/items" },
+      { name: "Brands", path: "/manage-inventory/brands" },
+      { name: "Categories", path: "/manage-inventory/categories" },
+      { name: "Sub-categories", path: "/manage-inventory/sub-categories" },
     ],
     roles: ["admin"],
   },
@@ -111,12 +110,43 @@ const navItems: NavItem[] = [
     ],
     roles: ["admin"],
   },
+  {
+    icon: <BoxIconLine />,
+    name: "Menu",
+    subItems: [
+      { name: "Menu Category", path: "/manage-menu/category" },
+      { name: "Menu List", path: "/manage-menu/list" },
+      { name: "Variant", path: "/manage-menu/variant" },
+      { name: "Add On", path: "/manage-menu/add-on" },
+    ],
+    roles: ["admin"],
+  },
+  {
+    icon: <GroupIcon />,
+    name: "Customers",
+    subItems: [
+      { name: "Manage Customers", path: "/manage-customers" },
+      { name: "Credit Settlement", path: "/manage-customers/credit-settlement" },
+      { name: "Cheques", path: "/manage-customers/cheques" },
+    ],
+    roles: ["admin"],
+  },
 
   // Cashier Items
   {
     icon: <GridIcon />,
     name: "Dashboard",
     path: "/cashier-dashboard",
+    roles: ["cashier"],
+  },
+  {
+    icon: <GroupIcon />,
+    name: "Customers",
+    subItems: [
+      { name: "Manage Customers", path: "/manage-customers" },
+      { name: "Credit Settlement", path: "/manage-customers/credit-settlement" },
+      { name: "Cheques", path: "/manage-customers/cheques" },
+    ],
     roles: ["cashier"],
   },
   // {
@@ -407,7 +437,13 @@ const AppSidebar: React.FC = () => {
     return { type: "main" as const, index };
   }, [pathname, visibleNavItems]);
 
-  const resolvedOpenSubmenu = openSubmenu ?? activeSubmenu;
+  const resolvedOpenSubmenu = openSubmenu;
+
+  useEffect(() => {
+    // Keep current route's submenu open on navigation,
+    // while still allowing manual collapse/expand on click.
+    setOpenSubmenu(activeSubmenu);
+  }, [activeSubmenu]);
 
   useEffect(() => {
     // Measure submenu height for both explicitly opened menus and auto-opened active route menus.
@@ -475,22 +511,7 @@ const AppSidebar: React.FC = () => {
       <div className="flex h-full flex-col overflow-y-auto duration-300 ease-linear no-scrollbar">
         <nav className="mb-6">
           <div className="flex flex-col gap-4">
-            <div>
-              <h2
-                className={`mb-4 text-xs uppercase flex leading-5 text-gray-400 ${
-                  !isExpanded && !isMobileOpen
-                    ? "lg:justify-center"
-                    : "justify-start"
-                }`}
-              >
-                {isExpanded || isMobileOpen ? (
-                  "Menu"
-                ) : (
-                  <HorizontaLDots />
-                )}
-              </h2>
-              {renderMenuItems(visibleNavItems, "main")}
-            </div>
+            <div>{renderMenuItems(visibleNavItems, "main")}</div>
 
             {/* <div className="">
               <h2

@@ -68,10 +68,10 @@ export type CreateInventoryBrandPayload = {
 export type CreateInventoryItemPayload = {
   name: string;
   categoryId: string;
-  subCategoryId: string;
+  subCategoryId?: string;
   brandId: string;
   unit: string;
-  expiryDate: string;
+  expiryDate?: string;
 };
 
 /** PATCH body for setting on-hand quantity (backend may expect number or string). */

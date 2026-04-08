@@ -98,6 +98,15 @@ export default function InventoryManagementClient({
   const [subCategorySuccess, setSubCategorySuccess] = useState("");
   const [brandSuccess, setBrandSuccess] = useState("");
 
+  // Kept for flow control and toast messaging without inline banners.
+  void error;
+  void categoryError;
+  void subCategoryError;
+  void brandError;
+  void categorySuccess;
+  void subCategorySuccess;
+  void brandSuccess;
+
   const [categoryPage, setCategoryPage] = useState(1);
   const [categoryPageSize, setCategoryPageSize] = useState(10);
   const [subCategoryPage, setSubCategoryPage] = useState(1);
@@ -380,7 +389,7 @@ export default function InventoryManagementClient({
   };
 
   const openAddItemPage = () => {
-    router.push("/manage-inventory-items/add");
+    router.push("/manage-inventory/items/add");
   };
 
   const openItemDetailModal = (itemId?: string) => {
@@ -657,8 +666,6 @@ export default function InventoryManagementClient({
         </div>
       </div>
 
-      {error ? <p className="text-sm text-error-500">{error}</p> : null}
-
       {section === "overview" ? (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <MetricCard
@@ -668,7 +675,7 @@ export default function InventoryManagementClient({
             icon={<FolderIcon className="size-6 text-brand-600 dark:text-brand-400" />}
             accentClassName="bg-brand-50 dark:bg-brand-500/10"
             isLoading={isLoading}
-            href="/manage-inventory-categories"
+            href="/manage-inventory/categories"
           />
           <MetricCard
             title="Sub-categories"
@@ -677,7 +684,7 @@ export default function InventoryManagementClient({
             icon={<GroupIcon className="size-6 text-success-600 dark:text-success-400" />}
             accentClassName="bg-success-50 dark:bg-success-500/10"
             isLoading={isLoading}
-            href="/manage-inventory-sub-categories"
+            href="/manage-inventory/sub-categories"
           />
           <MetricCard
             title="Brands"
@@ -686,7 +693,7 @@ export default function InventoryManagementClient({
             icon={<BoxCubeIcon className="size-6 text-warning-600 dark:text-warning-400" />}
             accentClassName="bg-warning-50 dark:bg-warning-500/10"
             isLoading={isLoading}
-            href="/manage-inventory-brands"
+            href="/manage-inventory/brands"
           />
           <MetricCard
             title="Items"
@@ -695,15 +702,13 @@ export default function InventoryManagementClient({
             icon={<TableIcon className="size-6 text-indigo-600 dark:text-indigo-400" />}
             accentClassName="bg-indigo-50 dark:bg-indigo-500/10"
             isLoading={isLoading}
-            href="/manage-inventory-items"
+            href="/manage-inventory/items"
           />
         </div>
       ) : null}
 
       {section === "categories" ? (
         <div className="space-y-4">
-          {categorySuccess ? <p className="text-sm text-success-600 dark:text-success-400">{categorySuccess}</p> : null}
-
           {isLoading ? (
             renderEmptyState("Loading categories...")
           ) : categories.length === 0 ? (
@@ -745,8 +750,6 @@ export default function InventoryManagementClient({
 
       {section === "subCategories" ? (
         <div className="space-y-4">
-          {subCategorySuccess ? <p className="text-sm text-success-600 dark:text-success-400">{subCategorySuccess}</p> : null}
-
           {isLoading ? (
             renderEmptyState("Loading sub-categories...")
           ) : subCategories.length === 0 ? (
@@ -792,8 +795,6 @@ export default function InventoryManagementClient({
 
       {section === "brands" ? (
         <div className="space-y-4">
-          {brandSuccess ? <p className="text-sm text-success-600 dark:text-success-400">{brandSuccess}</p> : null}
-
           {isLoading ? (
             renderEmptyState("Loading brands...")
           ) : brands.length === 0 ? (
@@ -898,8 +899,6 @@ export default function InventoryManagementClient({
             <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Create a new inventory category.</p>
           </div>
 
-          {categoryError ? <p className="text-sm text-error-500">{categoryError}</p> : null}
-
           <form className="space-y-4" onSubmit={handleCategorySave}>
             <div>
               <Label htmlFor="category-name">Name</Label>
@@ -926,8 +925,6 @@ export default function InventoryManagementClient({
             <h3 className="text-xl font-semibold text-gray-800 dark:text-white/90">Add Sub-category</h3>
             <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Create a new inventory sub-category.</p>
           </div>
-
-          {subCategoryError ? <p className="text-sm text-error-500">{subCategoryError}</p> : null}
 
           <form className="space-y-4" onSubmit={handleSubCategorySave}>
             <div>
@@ -970,8 +967,6 @@ export default function InventoryManagementClient({
             <h3 className="text-xl font-semibold text-gray-800 dark:text-white/90">Add Brand</h3>
             <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Create a new inventory brand.</p>
           </div>
-
-          {brandError ? <p className="text-sm text-error-500">{brandError}</p> : null}
 
           <form className="space-y-4" onSubmit={handleBrandSave}>
             <div>
@@ -1062,7 +1057,7 @@ export default function InventoryManagementClient({
           {isItemDetailLoading ? (
             renderEmptyState("Loading item details...")
           ) : itemDetailError ? (
-            <p className="text-sm text-error-500">{itemDetailError}</p>
+            renderEmptyState(itemDetailError)
           ) : selectedItem ? (
             <>
               <div className="space-y-3">

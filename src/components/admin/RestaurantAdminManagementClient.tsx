@@ -476,9 +476,6 @@ export default function RestaurantAdminManagementClient({
             </div>
           ) : null}
 
-          {staffError ? <p className="text-sm text-error-500">{staffError}</p> : null}
-          {staffSuccess ? <p className="text-sm text-success-600 dark:text-success-400">{staffSuccess}</p> : null}
-
           <div className="rounded-xl border border-gray-200 p-4 dark:border-gray-800">
             <input
               type="text"
@@ -602,9 +599,6 @@ export default function RestaurantAdminManagementClient({
               </button>
             </div>
           ) : null}
-
-          {supplierError ? <p className="text-sm text-error-500">{supplierError}</p> : null}
-          {supplierSuccess ? <p className="text-sm text-success-600 dark:text-success-400">{supplierSuccess}</p> : null}
 
           <div className="rounded-xl border border-gray-200 p-4 dark:border-gray-800">
             <input

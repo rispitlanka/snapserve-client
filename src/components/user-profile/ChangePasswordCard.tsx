@@ -93,9 +93,6 @@ export default function ChangePasswordCard() {
           <p className="max-w-2xl text-sm text-gray-500 dark:text-gray-400">
             Update your password for the currently signed-in role.
           </p>
-          {success ? (
-            <p className="mt-3 text-sm text-success-600 dark:text-success-400">{success}</p>
-          ) : null}
         </div>
 
         <button
@@ -132,8 +129,6 @@ export default function ChangePasswordCard() {
               Enter your current password and choose a new one.
             </p>
           </div>
-
-          {error ? <p className="text-sm text-error-500">{error}</p> : null}
 
           <form className="space-y-4" onSubmit={handleSubmit}>
             <div>

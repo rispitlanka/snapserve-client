@@ -456,12 +456,6 @@ export default function SuperadminDashboardClient({
           {headerActionLabel}
         </button>
       </div>
-      {error ? <p className="mt-2 text-sm text-error-500">{error}</p> : null}
-      {adminError ? <p className="mt-2 text-sm text-error-500">{adminError}</p> : null}
-      {adminSuccess ? (
-        <p className="mt-2 text-sm text-success-600 dark:text-success-400">{adminSuccess}</p>
-      ) : null}
-
       {showTabSwitcher ? (
         <div className="mt-6 inline-flex rounded-lg border border-gray-200 bg-gray-50 p-1 dark:border-gray-700 dark:bg-gray-900">
           <button
@@ -882,8 +876,6 @@ export default function SuperadminDashboardClient({
               Update the admin name and optionally set a new password (min 8 characters).
             </p>
           </div>
-
-          {adminError ? <p className="text-sm text-error-500">{adminError}</p> : null}
 
           <div>
             <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
