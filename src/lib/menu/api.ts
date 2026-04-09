@@ -1,4 +1,3 @@
-import { AUTH_API_BASE_URL } from "../auth/constants";
 import type {
   CreateMenuAddonPayload,
   CreateMenuItemPayload,
@@ -10,6 +9,7 @@ import type {
   UpdateMenuVariantPayload,
   UpsertMenuCategoryPayload,
 } from "@/types/menu.types";
+import { AUTH_API_BASE_URL } from "../auth/constants";
 
 const getAuthHeaders = (accessToken?: string) => {
   const headers: Record<string, string> = {
@@ -50,11 +50,19 @@ const requestJson = async <TResponse>(
   options: RequestInit,
   fallbackMessage: string
 ): Promise<TResponse> => {
+  const isFormDataBody =
+    typeof FormData !== "undefined" && options.body instanceof FormData;
+
+  const authHeader: Record<string, string> = {};
+  if (accessToken) {
+    authHeader.Authorization = `Bearer ${accessToken}`;
+  }
+
   const response = await fetch(`${AUTH_API_BASE_URL}${path}`, {
     ...options,
     credentials: "omit",
     headers: {
-      ...getAuthHeaders(accessToken),
+      ...(isFormDataBody ? authHeader : getAuthHeaders(accessToken)),
       ...(options.headers ?? {}),
     },
   });
@@ -159,16 +167,22 @@ export const updateMenuItem = async (
   accessToken: string,
   menuItemId: string,
   payload: UpdateMenuItemPayload
-) =>
-  requestJson(
+) => {
+  const body = new FormData();
+  if (Object.keys(payload).length > 0) {
+    body.append("data", JSON.stringify(payload));
+  }
+
+  return requestJson(
     `/menu/items/${encodeURIComponent(menuItemId)}`,
     accessToken,
     {
       method: "PATCH",
-      body: JSON.stringify(payload),
+      body,
     },
     "Failed to update menu item."
   );
+};
 
 export const createMenuCategory = async (
   accessToken: string,

@@ -8,12 +8,13 @@ import { Modal } from "@/components/ui/modal";
 import { getAuthSession, ROLE_DASHBOARD_ROUTE } from "@/lib/auth";
 import { listInventoryItems, type InventoryItem } from "@/lib/inventory";
 import {
-    addAddonPriceToMenuItem,
-    createMenuItemIngredient,
-    listMenuAddons,
-    listMenuCategories,
-    listMenuItems,
-    updateMenuItem,
+  addAddonPriceToMenuItem,
+  createMenuAddonIngredient,
+  createMenuItemIngredient,
+  listMenuAddons,
+  listMenuCategories,
+  listMenuItems,
+  updateMenuItem,
 } from "@/lib/menu";
 import { useClientPagedSlice } from "@/lib/pagination/clientPaging";
 import { useRouter } from "next/navigation";
@@ -30,6 +31,25 @@ type MenuItemRow = {
   cost: number;
   status: boolean;
   updatedAtMs: number;
+};
+
+type IngredientDraftState = {
+  ingredientId: string;
+  quantity: string;
+  unit: string;
+};
+
+type AddonIngredientDraftState = IngredientDraftState;
+
+type AddedIngredientRow = {
+  rowKey: string;
+  targetType: "item" | "addon";
+  addonId?: string;
+  addonName?: string;
+  ingredientId: string;
+  ingredientName: string;
+  quantity: number;
+  unit: string;
 };
 
 type SortOption = "category" | "price" | "status" | "updatedAt";
@@ -100,6 +120,15 @@ const formatMoney = (n: number) =>
 const sortSelectClass =
   "h-10 min-w-[12rem] rounded-lg border border-gray-300 bg-transparent px-3 py-2 text-sm text-gray-800 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90";
 
+const newRowKey = () =>
+  typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : String(Date.now());
+
+const emptyIngredientDraft = (): IngredientDraftState => ({
+  ingredientId: "",
+  quantity: "",
+  unit: "",
+});
+
 const normalizeMenuItems = (
   raw: unknown[],
   categoryNameById: Record<string, string>
@@ -164,10 +193,16 @@ export default function MenuListClient() {
   const [detailsItemId, setDetailsItemId] = useState<string | null>(null);
   const [detailsSaving, setDetailsSaving] = useState(false);
   const [detailsForm, setDetailsForm] = useState({
+    menuId: "",
     name: "",
     menuImage: "",
     cost: "",
+    defaultVariantPrice: "",
   });
+  const [detailsNewImageData, setDetailsNewImageData] = useState<string | null>(null);
+  const [detailsImagePreview, setDetailsImagePreview] = useState<string>("");
+  const [detailsImageUploadName, setDetailsImageUploadName] = useState<string>("");
+  const [detailsImageDragActive, setDetailsImageDragActive] = useState(false);
 
   const [addonOpen, setAddonOpen] = useState(false);
   const [addonItemId, setAddonItemId] = useState<string | null>(null);
@@ -177,11 +212,10 @@ export default function MenuListClient() {
   const [ingredientOpen, setIngredientOpen] = useState(false);
   const [ingredientItemId, setIngredientItemId] = useState<string | null>(null);
   const [ingredientSaving, setIngredientSaving] = useState(false);
-  const [ingredientForm, setIngredientForm] = useState({
-    ingredientId: "",
-    quantity: "",
-    unit: "",
-  });
+  const [menuIngredientDraft, setMenuIngredientDraft] = useState<IngredientDraftState>(emptyIngredientDraft);
+  const [selectedAddonId, setSelectedAddonId] = useState("");
+  const [addonIngredientDrafts, setAddonIngredientDrafts] = useState<Record<string, AddonIngredientDraftState>>({});
+  const [addedIngredients, setAddedIngredients] = useState<AddedIngredientRow[]>([]);
 
   const loadAll = useCallback(async () => {
     const session = getAuthSession();
@@ -304,16 +338,55 @@ export default function MenuListClient() {
   const openEditDetails = (row: MenuItemRow) => {
     setDetailsItemId(row.id);
     setDetailsForm({
+      menuId: row.id,
       name: row.name,
       menuImage: row.menuImage,
       cost: row.cost ? String(row.cost) : "",
+      defaultVariantPrice: row.sellingPrice ? String(row.sellingPrice) : "",
     });
+    setDetailsNewImageData(null);
+    setDetailsImagePreview(row.menuImage || "");
+    setDetailsImageUploadName("");
+    setDetailsImageDragActive(false);
     setDetailsOpen(true);
   };
 
   const closeDetails = () => {
     setDetailsOpen(false);
     setDetailsItemId(null);
+    setDetailsNewImageData(null);
+    setDetailsImagePreview("");
+    setDetailsImageUploadName("");
+    setDetailsImageDragActive(false);
+  };
+
+  const onDetailsImageFile = (file: File | null) => {
+    if (!file) {
+      setDetailsNewImageData(null);
+      setDetailsImagePreview(detailsForm.menuImage || "");
+      setDetailsImageUploadName("");
+      return;
+    }
+    if (!file.type.startsWith("image/")) {
+      toast.error("Choose an image file.");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result;
+      if (typeof result === "string") {
+        setDetailsNewImageData(result);
+        setDetailsImagePreview(result);
+        setDetailsImageUploadName(file.name);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const onDetailsImageDrop = (ev: React.DragEvent<HTMLDivElement>) => {
+    ev.preventDefault();
+    setDetailsImageDragActive(false);
+    onDetailsImageFile(ev.dataTransfer.files?.[0] ?? null);
   };
 
   const submitDetails = async (e: React.FormEvent) => {
@@ -328,6 +401,13 @@ export default function MenuListClient() {
       toast.error("Enter a valid cost (0 or greater).");
       return;
     }
+    if (detailsForm.defaultVariantPrice.trim()) {
+      const defaultVariantPriceNum = Number(detailsForm.defaultVariantPrice);
+      if (!Number.isFinite(defaultVariantPriceNum) || defaultVariantPriceNum < 0) {
+        toast.error("Enter a valid default variant price (0 or greater).");
+        return;
+      }
+    }
 
     const session = getAuthSession();
     if (!session) {
@@ -335,7 +415,7 @@ export default function MenuListClient() {
       return;
     }
 
-    const menuImage = detailsForm.menuImage.trim() || undefined;
+    const menuImage = detailsNewImageData ?? (detailsForm.menuImage.trim() || undefined);
 
     if (!detailsItemId) {
       toast.error("Nothing to update.");
@@ -431,58 +511,154 @@ export default function MenuListClient() {
   };
 
   const openIngredient = (row: MenuItemRow) => {
-    setIngredientItemId(row.id);
-    setIngredientForm({ ingredientId: "", quantity: "", unit: "" });
-    setIngredientOpen(true);
+    router.push(`/manage-menu/list/${row.id}/ingredients`);
   };
 
   const closeIngredient = () => {
     setIngredientOpen(false);
     setIngredientItemId(null);
+    setMenuIngredientDraft(emptyIngredientDraft());
+    setSelectedAddonId("");
+    setAddonIngredientDrafts({});
+    setAddedIngredients([]);
   };
 
-  const onPickInventoryItem = (id: string) => {
+  const onPickMenuIngredient = (id: string) => {
     const inv = inventoryItems.find((i) => i.id === id);
-    setIngredientForm((prev) => ({
+    setMenuIngredientDraft((prev) => ({
       ...prev,
       ingredientId: id,
       unit: inv?.unit ?? prev.unit,
     }));
   };
 
-  const submitIngredient = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!ingredientItemId) return;
-    if (!ingredientForm.ingredientId) {
-      toast.error("Select an ingredient.");
+  const onPickAddonIngredient = (addonId: string, id: string) => {
+    const inv = inventoryItems.find((i) => i.id === id);
+    setAddonIngredientDrafts((prev) => ({
+      ...prev,
+      [addonId]: {
+        ...(prev[addonId] ?? emptyIngredientDraft()),
+        ingredientId: id,
+        unit: inv?.unit ?? prev[addonId]?.unit ?? "",
+      },
+    }));
+  };
+
+  const addMenuIngredientRow = () => {
+    if (!menuIngredientDraft.ingredientId) {
+      toast.error("Select an ingredient item.");
       return;
     }
-    const qty = Number(ingredientForm.quantity);
+    const qty = Number(menuIngredientDraft.quantity);
     if (!Number.isFinite(qty) || qty <= 0) {
       toast.error("Enter a valid quantity.");
       return;
     }
-    const unit = ingredientForm.unit.trim();
+    const unit = menuIngredientDraft.unit.trim();
     if (!unit) {
-      toast.error("Unit is required.");
+      toast.error("Select a unit.");
       return;
     }
+
+    const ingredientName =
+      inventoryItems.find((inv) => inv.id === menuIngredientDraft.ingredientId)?.name ??
+      menuIngredientDraft.ingredientId;
+
+    setAddedIngredients((prev) => [
+      ...prev,
+      {
+        rowKey: newRowKey(),
+        targetType: "item",
+        ingredientId: menuIngredientDraft.ingredientId,
+        ingredientName,
+        quantity: qty,
+        unit,
+      },
+    ]);
+
+    setMenuIngredientDraft({ ingredientId: "", quantity: "", unit: "" });
+  };
+
+  const addAddonIngredientRow = (addonId: string) => {
+    const draft = addonIngredientDrafts[addonId] ?? emptyIngredientDraft();
+
+    if (!addonId) {
+      toast.error("Select an add-on.");
+      return;
+    }
+    if (!draft.ingredientId) {
+      toast.error("Select an ingredient item.");
+      return;
+    }
+    const qty = Number(draft.quantity);
+    if (!Number.isFinite(qty) || qty <= 0) {
+      toast.error("Enter a valid quantity.");
+      return;
+    }
+    const unit = draft.unit.trim();
+    if (!unit) {
+      toast.error("Select a unit.");
+      return;
+    }
+
+    const ingredientName =
+      inventoryItems.find((inv) => inv.id === draft.ingredientId)?.name ?? draft.ingredientId;
+    const addonName = addons.find((a) => a.id === addonId)?.name ?? addonId;
+
+    setAddedIngredients((prev) => [
+      ...prev,
+      {
+        rowKey: newRowKey(),
+        targetType: "addon",
+        addonId,
+        addonName,
+        ingredientId: draft.ingredientId,
+        ingredientName,
+        quantity: qty,
+        unit,
+      },
+    ]);
+
+    setAddonIngredientDrafts((prev) => ({
+      ...prev,
+      [addonId]: emptyIngredientDraft(),
+    }));
+  };
+
+  const submitIngredient = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!ingredientItemId) return;
+    if (addedIngredients.length === 0) {
+      toast.error("Add at least one ingredient.");
+      return;
+    }
+
     const session = getAuthSession();
     if (!session) {
       toast.error("Session not found.");
       return;
     }
+
     setIngredientSaving(true);
     try {
-      await createMenuItemIngredient(session.accessToken, ingredientItemId, {
-        ingredientId: ingredientForm.ingredientId,
-        quantity: qty,
-        unit,
-      });
-      toast.success("Ingredient added.");
+      for (const row of addedIngredients) {
+        const payload = {
+          ingredientId: row.ingredientId,
+          quantity: row.quantity,
+          unit: row.unit,
+        };
+
+        if (row.targetType === "addon" && row.addonId) {
+          await createMenuAddonIngredient(session.accessToken, ingredientItemId, row.addonId, payload);
+        } else {
+          await createMenuItemIngredient(session.accessToken, ingredientItemId, payload);
+        }
+      }
+
+      toast.success("Ingredients saved.");
       closeIngredient();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to add ingredient.");
+      toast.error(err instanceof Error ? err.message : "Failed to save ingredients.");
     } finally {
       setIngredientSaving(false);
     }
@@ -495,6 +671,21 @@ export default function MenuListClient() {
       </div>
     );
   }
+
+  const menuAddedIngredients = addedIngredients.filter((row) => row.targetType === "item");
+
+  const addonRows = addedIngredients.filter(
+    (row): row is AddedIngredientRow & { addonId: string } =>
+      row.targetType === "addon" && Boolean(row.addonId)
+  );
+
+  const addonGroupIdSet = new Set<string>();
+  if (selectedAddonId) addonGroupIdSet.add(selectedAddonId);
+  for (const row of addonRows) addonGroupIdSet.add(row.addonId);
+
+  const addonGroupIds = addons
+    .map((addon) => addon.id)
+    .filter((addonId) => addonGroupIdSet.has(addonId));
 
   return (
     <div className="space-y-6 rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/3">
@@ -655,43 +846,124 @@ export default function MenuListClient() {
         ) : null}
       </section>
 
-      <Modal isOpen={detailsOpen} onClose={closeDetails} className="max-w-lg p-4 sm:p-6">
-        <div className="space-y-4">
-          <h3 className="text-xl font-semibold text-gray-800 dark:text-white/90">Edit details</h3>
-          <form className="space-y-4" onSubmit={submitDetails}>
-            <div>
-              <Label>Name</Label>
-              <Input
-                value={detailsForm.name}
-                onChange={(ev) => setDetailsForm((p) => ({ ...p, name: ev.target.value }))}
-                placeholder="Food name"
-              />
+      <Modal isOpen={detailsOpen} onClose={closeDetails} className="max-w-4xl p-5">
+        <div className="space-y-5">
+          <div className="flex items-center justify-between gap-3">
+            <h3 className="text-xl font-semibold text-gray-800 dark:text-white/90">Update Menu Item</h3>
+          </div>
+
+          <form className="space-y-5" onSubmit={submitDetails}>
+            <div className="rounded-xl border border-gray-200 p-4 dark:border-gray-800">
+              <h4 className="mb-3 text-sm font-semibold text-gray-800 dark:text-white/90">Basic Details</h4>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div>
+                  <Label>Menu ID</Label>
+                  <Input value={detailsForm.menuId} disabled />
+                </div>
+                <div>
+                  <Label>Menu Name</Label>
+                  <Input
+                    value={detailsForm.name}
+                    onChange={(ev) => setDetailsForm((p) => ({ ...p, name: ev.target.value }))}
+                    placeholder="Veg Biriyani"
+                  />
+                </div>
+              </div>
             </div>
-            <div>
-              <Label>Image URL</Label>
-              <Input
-                value={detailsForm.menuImage}
-                onChange={(ev) => setDetailsForm((p) => ({ ...p, menuImage: ev.target.value }))}
-                placeholder="https://..."
-              />
+
+            <div className="rounded-xl border border-gray-200 p-4 dark:border-gray-800">
+              <h4 className="mb-3 text-sm font-semibold text-gray-800 dark:text-white/90">Image Section</h4>
+              <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+                <div className="shrink-0">
+                  <Label>Current Image</Label>
+                  {detailsImagePreview ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={detailsImagePreview}
+                      alt="Menu preview"
+                      className="h-[90px] w-[90px] rounded-lg border border-gray-200 object-cover dark:border-gray-700"
+                    />
+                  ) : (
+                    <p className="text-sm text-gray-500 dark:text-gray-400">No image uploaded</p>
+                  )}
+                </div>
+                <div className="w-full md:max-w-md">
+                  <Label htmlFor="details-menu-image-file">Upload New Image</Label>
+                  <input
+                    id="details-menu-image-file"
+                    type="file"
+                    accept="image/*"
+                    onChange={(ev) => {
+                      onDetailsImageFile(ev.target.files?.[0] ?? null);
+                      ev.target.value = "";
+                    }}
+                    className="sr-only"
+                  />
+                  <div
+                    onDragEnter={() => setDetailsImageDragActive(true)}
+                    onDragOver={(ev) => {
+                      ev.preventDefault();
+                      ev.dataTransfer.dropEffect = "copy";
+                      if (!detailsImageDragActive) setDetailsImageDragActive(true);
+                    }}
+                    onDragLeave={() => setDetailsImageDragActive(false)}
+                    onDrop={onDetailsImageDrop}
+                    className={`rounded-lg border border-dashed p-4 transition ${
+                      detailsImageDragActive
+                        ? "border-brand-400 bg-brand-50/50 dark:bg-brand-500/10"
+                        : "border-gray-300 dark:border-gray-700"
+                    }`}
+                  >
+                    <label
+                      htmlFor="details-menu-image-file"
+                      className="block cursor-pointer text-center text-sm text-gray-600 dark:text-gray-300"
+                    >
+                      Drag and drop an image here, or click to browse
+                    </label>
+                  </div>
+                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    {detailsImageUploadName || "Leave empty to keep current image"}
+                  </p>
+                </div>
+              </div>
             </div>
-            <div>
-              <Label>Cost</Label>
-              <Input
-                type="number"
-                min="0"
-                step={0.01}
-                value={detailsForm.cost}
-                onChange={(ev) => setDetailsForm((p) => ({ ...p, cost: ev.target.value }))}
-                placeholder="0.00"
-              />
+
+            <div className="rounded-xl border border-gray-200 p-4 dark:border-gray-800">
+              <h4 className="mb-3 text-sm font-semibold text-gray-800 dark:text-white/90">Pricing</h4>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div>
+                  <Label>Menu Cost</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    step={0.01}
+                    value={detailsForm.cost}
+                    onChange={(ev) => setDetailsForm((p) => ({ ...p, cost: ev.target.value }))}
+                    placeholder="0.00"
+                  />
+                </div>
+                <div>
+                  <Label>Variant Prices</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    step={0.01}
+                    value={detailsForm.defaultVariantPrice}
+                    onChange={(ev) =>
+                      setDetailsForm((p) => ({ ...p, defaultVariantPrice: ev.target.value }))
+                    }
+                    placeholder="Default Price"
+                  />
+                </div>
+              </div>
             </div>
-            <div className="flex justify-end gap-2">
+
+            <div className="flex justify-end gap-3">
               <Button type="button" variant="outline" size="sm" onClick={closeDetails}>
                 Cancel
               </Button>
               <Button type="submit" size="sm" disabled={detailsSaving}>
-                {detailsSaving ? "Saving..." : "Save"}
+                {detailsSaving ? "Saving..." : "Update"}
               </Button>
             </div>
           </form>
@@ -701,7 +973,7 @@ export default function MenuListClient() {
       <Modal isOpen={addonOpen} onClose={closeAddon} className="max-w-md p-4 sm:p-6">
         <div className="space-y-4">
           <h3 className="text-xl font-semibold text-gray-800 dark:text-white/90">Add add-on to item</h3>
-          <form className="space-y-4" onSubmit={submitAddon}>
+          <form className="space-y-4" onSubmit={submitAddon} noValidate>
             <div>
               <Label>Add-on</Label>
               <select
@@ -722,10 +994,9 @@ export default function MenuListClient() {
               <Input
                 type="text"
                 inputMode="decimal"
-                pattern="^\\d*\\.?\\d{0,2}$"
                 value={addonForm.addonsPrice}
                 onChange={(ev) => {
-                  const next = ev.target.value;
+                  const next = ev.target.value.replace(",", ".");
                   if (next === "" || DECIMAL_INPUT_RE.test(next)) {
                     setAddonForm((p) => ({ ...p, addonsPrice: next }));
                   }
@@ -745,51 +1016,322 @@ export default function MenuListClient() {
         </div>
       </Modal>
 
-      <Modal isOpen={ingredientOpen} onClose={closeIngredient} className="max-w-md p-4 sm:p-6">
-        <div className="space-y-4">
-          <h3 className="text-xl font-semibold text-gray-800 dark:text-white/90">Add ingredient</h3>
-          <form className="space-y-4" onSubmit={submitIngredient}>
-            <div>
-              <Label>Inventory item</Label>
-              <select
-                value={ingredientForm.ingredientId}
-                onChange={(ev) => onPickInventoryItem(ev.target.value)}
-                className={sortSelectClass + " w-full"}
-              >
-                <option value="">Select ingredient</option>
-                {inventoryItems.map((inv) => (
-                  <option key={inv.id} value={inv.id}>
-                    {inv.name}
-                    {inv.category?.name ? ` · ${inv.category.name}` : ""}
-                  </option>
-                ))}
-              </select>
+      <Modal isOpen={ingredientOpen} onClose={closeIngredient} className="max-w-4xl p-4 sm:p-6">
+        <div className="space-y-5">
+          <div className="flex items-center justify-between gap-3">
+            <h3 className="text-xl font-semibold text-gray-800 dark:text-white/90">Add Ingredient</h3>
+          </div>
+
+          <form className="space-y-5" onSubmit={submitIngredient}>
+            <div className="rounded-xl border border-gray-200 p-4 dark:border-gray-800">
+              <h4 className="mb-3 text-sm font-semibold text-gray-800 dark:text-white/90">Menu Info</h4>
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                <div>
+                  <Label>Food Name</Label>
+                  <Input
+                    value={items.find((it) => it.id === ingredientItemId)?.name ?? ""}
+                    disabled
+                  />
+                </div>
+                <div>
+                  <Label>Variant</Label>
+                  <Input value="Default" disabled />
+                </div>
+                <div>
+                  <Label>Variant Price</Label>
+                  <Input
+                    value={formatMoney(items.find((it) => it.id === ingredientItemId)?.sellingPrice ?? 0)}
+                    disabled
+                  />
+                </div>
+                <div>
+                  <Label>Total Cost</Label>
+                  <Input
+                    value={formatMoney(items.find((it) => it.id === ingredientItemId)?.cost ?? 0)}
+                    disabled
+                  />
+                </div>
+              </div>
             </div>
-            <div>
-              <Label>Quantity</Label>
-              <Input
-                type="number"
-                min="0"
-                step={0.001}
-                value={ingredientForm.quantity}
-                onChange={(ev) => setIngredientForm((p) => ({ ...p, quantity: ev.target.value }))}
-                placeholder="e.g. 1"
-              />
+
+            <div className="border-t border-gray-200 dark:border-gray-800" />
+
+            <div className="space-y-3 rounded-xl border border-gray-200 p-4 dark:border-gray-800">
+              <h4 className="text-sm font-semibold text-gray-800 dark:text-white/90">Add Ingredients</h4>
+              <div className="grid grid-cols-1 gap-2 lg:grid-cols-4 lg:items-end">
+                <div>
+                  <Label>Ingredient Item</Label>
+                  <select
+                    value={menuIngredientDraft.ingredientId}
+                    onChange={(ev) => onPickMenuIngredient(ev.target.value)}
+                    className={sortSelectClass + " w-full"}
+                  >
+                    <option value="">Select Item</option>
+                    {inventoryItems.map((inv) => (
+                      <option key={inv.id} value={inv.id}>
+                        {inv.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <Label>Quantity</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    step={0.001}
+                    value={menuIngredientDraft.quantity}
+                    onChange={(ev) =>
+                      setMenuIngredientDraft((p) => ({ ...p, quantity: ev.target.value }))
+                    }
+                    placeholder="0"
+                    className="h-10! py-2"
+                  />
+                </div>
+                <div>
+                  <Label>Unit</Label>
+                  <select
+                    value={menuIngredientDraft.unit}
+                    onChange={(ev) =>
+                      setMenuIngredientDraft((p) => ({ ...p, unit: ev.target.value }))
+                    }
+                    className={sortSelectClass + " w-full"}
+                  >
+                    <option value="">Select Unit</option>
+                    {[...new Set(inventoryItems.map((i) => i.unit).filter(Boolean))].map((u) => (
+                      <option key={u} value={u}>
+                        {u}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="flex items-end">
+                  <Button type="button" size="sm" className="h-10 w-full" onClick={addMenuIngredientRow}>
+                    Add
+                  </Button>
+                </div>
+              </div>
             </div>
-            <div>
-              <Label>Unit</Label>
-              <Input
-                value={ingredientForm.unit}
-                onChange={(ev) => setIngredientForm((p) => ({ ...p, unit: ev.target.value }))}
-                placeholder="e.g. kg"
-              />
+
+            <div className="space-y-3 rounded-xl border border-gray-200 p-4 dark:border-gray-800">
+              <h4 className="text-sm font-semibold text-gray-800 dark:text-white/90">Add Ingredients for Addons</h4>
+              <div>
+                <Label>Select Addon</Label>
+                <select
+                  value={selectedAddonId}
+                  onChange={(ev) => {
+                    const addonId = ev.target.value;
+                    setSelectedAddonId(addonId);
+                    if (!addonId) return;
+                    setAddonIngredientDrafts((prev) => ({
+                      ...prev,
+                      [addonId]: prev[addonId] ?? emptyIngredientDraft(),
+                    }));
+                  }}
+                  className={sortSelectClass + " w-full"}
+                >
+                  <option value="">Select Addon</option>
+                  {addons.map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {a.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {addonGroupIds.length === 0 ? (
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  Select an add-on to add ingredients.
+                </p>
+              ) : (
+                <div className="space-y-3">
+                  {addonGroupIds.map((addonId) => {
+                    const addonName = addons.find((a) => a.id === addonId)?.name ?? addonId;
+                    const addonDraft = addonIngredientDrafts[addonId] ?? emptyIngredientDraft();
+                    const rows = addonRows.filter((row) => row.addonId === addonId);
+
+                    return (
+                      <div key={addonId} className="rounded-lg border border-gray-200 p-3 dark:border-gray-700">
+                        <div className="mb-3 flex items-center justify-between gap-2">
+                          <h5 className="text-sm font-semibold text-gray-800 dark:text-white/90">{addonName}</h5>
+                        </div>
+
+                        <div className="grid grid-cols-1 gap-2 lg:grid-cols-4 lg:items-end">
+                          <div>
+                            <Label>Ingredient Item</Label>
+                            <select
+                              value={addonDraft.ingredientId}
+                              onChange={(ev) => onPickAddonIngredient(addonId, ev.target.value)}
+                              className={sortSelectClass + " w-full"}
+                            >
+                              <option value="">Select Item</option>
+                              {inventoryItems.map((inv) => (
+                                <option key={inv.id} value={inv.id}>
+                                  {inv.name}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                          <div>
+                            <Label>Quantity</Label>
+                            <Input
+                              type="number"
+                              min="0"
+                              step={0.001}
+                              value={addonDraft.quantity}
+                              onChange={(ev) =>
+                                setAddonIngredientDrafts((prev) => ({
+                                  ...prev,
+                                  [addonId]: {
+                                    ...(prev[addonId] ?? emptyIngredientDraft()),
+                                    quantity: ev.target.value,
+                                  },
+                                }))
+                              }
+                              placeholder="0"
+                              className="h-10! py-2"
+                            />
+                          </div>
+                          <div>
+                            <Label>Unit</Label>
+                            <select
+                              value={addonDraft.unit}
+                              onChange={(ev) =>
+                                setAddonIngredientDrafts((prev) => ({
+                                  ...prev,
+                                  [addonId]: {
+                                    ...(prev[addonId] ?? emptyIngredientDraft()),
+                                    unit: ev.target.value,
+                                  },
+                                }))
+                              }
+                              className={sortSelectClass + " w-full"}
+                            >
+                              <option value="">Select Unit</option>
+                              {[...new Set(inventoryItems.map((i) => i.unit).filter(Boolean))].map((u) => (
+                                <option key={u} value={u}>
+                                  {u}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                          <div className="flex items-end">
+                            <Button
+                              type="button"
+                              size="sm"
+                              className="h-10 w-full"
+                              onClick={() => addAddonIngredientRow(addonId)}
+                            >
+                              Add
+                            </Button>
+                          </div>
+                        </div>
+
+                        <div className="mt-3 overflow-x-auto">
+                          <table className="min-w-full text-left text-sm">
+                            <thead>
+                              <tr className="text-gray-500 dark:text-gray-400">
+                                <th className="pb-2 pr-3 font-medium">Ingredient Name</th>
+                                <th className="pb-2 pr-3 font-medium">Quantity</th>
+                                <th className="pb-2 pr-3 font-medium">Unit</th>
+                                <th className="pb-2 font-medium">Action</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                              {rows.length === 0 ? (
+                                <tr>
+                                  <td colSpan={4} className="py-3 text-gray-500">
+                                    No ingredients added yet
+                                  </td>
+                                </tr>
+                              ) : (
+                                rows.map((row) => (
+                                  <tr key={row.rowKey}>
+                                    <td className="py-2 pr-3 text-gray-800 dark:text-gray-200">
+                                      {row.ingredientName}
+                                    </td>
+                                    <td className="py-2 pr-3 text-gray-800 dark:text-gray-200">{row.quantity}</td>
+                                    <td className="py-2 pr-3 text-gray-800 dark:text-gray-200">{row.unit}</td>
+                                    <td className="py-2">
+                                      <button
+                                        type="button"
+                                        className="text-sm text-red-600 hover:underline dark:text-red-400"
+                                        onClick={() =>
+                                          setAddedIngredients((prev) =>
+                                            prev.filter((x) => x.rowKey !== row.rowKey)
+                                          )
+                                        }
+                                      >
+                                        Delete
+                                      </button>
+                                    </td>
+                                  </tr>
+                                ))
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
+
+            <div className="border-t border-gray-200 dark:border-gray-800" />
+
+            <div className="space-y-3 rounded-xl border border-gray-200 p-4 dark:border-gray-800">
+              <h4 className="text-sm font-semibold text-gray-800 dark:text-white/90">Added Ingredients</h4>
+              <div className="overflow-x-auto">
+                <table className="min-w-full text-left text-sm">
+                  <thead>
+                    <tr className="text-gray-500 dark:text-gray-400">
+                      <th className="pb-2 pr-3 font-medium">Item Name</th>
+                      <th className="pb-2 pr-3 font-medium">Quantity</th>
+                      <th className="pb-2 pr-3 font-medium">Unit</th>
+                      <th className="pb-2 font-medium">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                    {menuAddedIngredients.length === 0 ? (
+                      <tr>
+                        <td colSpan={4} className="py-3 text-gray-500">
+                          No ingredients added yet
+                        </td>
+                      </tr>
+                    ) : (
+                      menuAddedIngredients.map((row) => (
+                        <tr key={row.rowKey}>
+                          <td className="py-2 pr-3 text-gray-800 dark:text-gray-200">
+                            {row.ingredientName}
+                          </td>
+                          <td className="py-2 pr-3 text-gray-800 dark:text-gray-200">{row.quantity}</td>
+                          <td className="py-2 pr-3 text-gray-800 dark:text-gray-200">{row.unit}</td>
+                          <td className="py-2">
+                            <button
+                              type="button"
+                              className="text-sm text-red-600 hover:underline dark:text-red-400"
+                              onClick={() =>
+                                setAddedIngredients((prev) => prev.filter((x) => x.rowKey !== row.rowKey))
+                              }
+                            >
+                              Delete
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
             <div className="flex justify-end gap-2">
               <Button type="button" variant="outline" size="sm" onClick={closeIngredient}>
                 Cancel
               </Button>
               <Button type="submit" size="sm" disabled={ingredientSaving}>
-                {ingredientSaving ? "Saving..." : "Add ingredient"}
+                {ingredientSaving ? "Saving..." : "Save Ingredients"}
               </Button>
             </div>
           </form>

@@ -96,9 +96,6 @@ export default function SignInForm() {
           <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
             Sign in to continue.
           </p>
-          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-            Superadmin can sign in using password only.
-          </p>
         </div>
 
         <form onSubmit={handleSignIn}>
