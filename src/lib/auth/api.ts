@@ -4,11 +4,14 @@ import type {
     AuthSession,
     ChangePasswordPayload,
     ChangePasswordResult,
+    CreateRestaurantAdminPayload,
     CreateStaffPayload,
     CreateSupplierPayload,
     Register,
     Staff,
     Supplier,
+    UpdateRestaurantAdminPayload,
+    UpdateRestaurantPayload,
     UpdateStaffPayload,
     UserRole,
 } from "./types";
@@ -471,12 +474,6 @@ export const createRestaurant = async (
   return (await response.json()) as unknown;
 };
 
-export type UpdateRestaurantPayload = {
-  name: string;
-  mobileNumber: string;
-  isActive: boolean;
-};
-
 /**
  * Updates a restaurant. `PATCH /restaurants/{id}` — body matches backend DTO.
  */
@@ -499,12 +496,6 @@ export const updateRestaurant = async (
   }
 
   return (await response.json()) as unknown;
-};
-
-export type CreateRestaurantAdminPayload = {
-  restaurantId: string;
-  name: string;
-  password: string;
 };
 
 /**
@@ -545,11 +536,6 @@ export const listRestaurantAdmins = async (accessToken: string) => {
   }
 
   return (await response.json()) as unknown;
-};
-
-export type UpdateRestaurantAdminPayload = {
-  name?: string;
-  password?: string;
 };
 
 export const updateRestaurantAdmin = async (

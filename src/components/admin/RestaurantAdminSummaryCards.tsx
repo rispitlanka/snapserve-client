@@ -2,7 +2,7 @@
 
 import MetricCard from "@/components/common/MetricCard";
 import FlatpickrDateInput from "@/components/form/FlatpickrDateInput";
-import { BoxCubeIcon, DollarLineIcon, GroupIcon, UserIcon } from "@/icons";
+import { DollarLineIcon, ReceiptIcon, SupplierIcon, UserIcon } from "@/icons";
 import { AUTH_API_BASE_URL, getAuthSession, listStaff, listSuppliers, ROLE_DASHBOARD_ROUTE } from "@/lib/auth";
 import { formatDateTimeForDisplay } from "@/lib/format";
 import { listInventoryItems } from "@/lib/inventory";
@@ -511,7 +511,7 @@ export default function RestaurantAdminSummaryCards() {
         <MetricCard
           title={`${statsRangeLabel} Orders`}
           value={summary.todayOrders.toLocaleString()}
-          icon={<GroupIcon className="size-6 text-brand-600 dark:text-brand-400" />}
+          icon={<ReceiptIcon className="size-6 text-brand-600 dark:text-brand-400" />}
           accentClassName="bg-brand-50 dark:bg-brand-500/10"
           isLoading={isLoading}
         />
@@ -537,7 +537,7 @@ export default function RestaurantAdminSummaryCards() {
         <MetricCard
           title="Total Suppliers"
           value={summary.totalSuppliers.toLocaleString()}
-          icon={<BoxCubeIcon className="size-6 text-success-600 dark:text-success-400" />}
+          icon={<SupplierIcon className="size-6 text-success-600 dark:text-success-400" />}
           accentClassName="bg-success-50 dark:bg-success-500/10"
           isLoading={isLoading}
         />

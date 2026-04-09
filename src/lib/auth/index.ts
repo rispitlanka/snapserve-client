@@ -29,6 +29,7 @@ export type {
     AuthUser,
     ChangePasswordPayload,
     ChangePasswordResult,
+    CreateRestaurantAdminPayload,
     CreateStaffPayload,
     CreateSupplierPayload,
     DashboardSummary,
@@ -37,8 +38,9 @@ export type {
     Restaurant,
     Staff,
     Supplier,
+    UpdateRestaurantAdminPayload,
+    UpdateRestaurantPayload,
     UpdateStaffPayload,
-    UserRole
+    UserRole,
 } from "./types";
-export type { UpdateRestaurantPayload } from "./api";
 

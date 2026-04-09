@@ -28,4 +28,4 @@ export type {
   UpdateMenuItemPayload,
   UpdateMenuVariantPayload,
   UpsertMenuCategoryPayload,
-} from "./api";
+} from "@/types/menu.types";
