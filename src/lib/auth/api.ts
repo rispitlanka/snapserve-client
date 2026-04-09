@@ -1,19 +1,21 @@
 import { AUTH_API_BASE_URL } from "./constants";
 import type {
-    ApiActionResult,
-    AuthSession,
-    ChangePasswordPayload,
-    ChangePasswordResult,
-    CreateRestaurantAdminPayload,
-    CreateStaffPayload,
-    CreateSupplierPayload,
-    Register,
-    Staff,
-    Supplier,
-    UpdateRestaurantAdminPayload,
-    UpdateRestaurantPayload,
-    UpdateStaffPayload,
-    UserRole,
+  ApiActionResult,
+  AuthSession,
+  ChangePasswordPayload,
+  ChangePasswordResult,
+  CreateRestaurantAdminPayload,
+  CreateStaffPayload,
+  CreateSupplierPayload,
+  LoyaltySettings,
+  Register,
+  Staff,
+  Supplier,
+  UpdateLoyaltySettingsPayload,
+  UpdateRestaurantAdminPayload,
+  UpdateRestaurantPayload,
+  UpdateStaffPayload,
+  UserRole,
 } from "./types";
 
 const normalizeRole = (value: unknown): UserRole => {
@@ -63,6 +65,23 @@ const getBoolean = (
   for (const key of keys) {
     const value = obj[key];
     if (typeof value === "boolean") return value;
+  }
+
+  return fallback;
+};
+
+const getNumber = (
+  obj: Record<string, unknown>,
+  keys: string[],
+  fallback = 0
+) => {
+  for (const key of keys) {
+    const value = obj[key];
+    if (typeof value === "number" && Number.isFinite(value)) return value;
+    if (typeof value === "string" && value.trim()) {
+      const parsed = Number(value);
+      if (Number.isFinite(parsed)) return parsed;
+    }
   }
 
   return fallback;
@@ -472,6 +491,56 @@ export const createRestaurant = async (
   }
 
   return (await response.json()) as unknown;
+};
+
+const parseLoyaltySettings = (raw: unknown): LoyaltySettings => {
+  const root = (raw ?? {}) as Record<string, unknown>;
+  const body = getObject(root, ["data", "settings", "loyaltySettings"]) ?? root;
+
+  return {
+    enabled: getBoolean(body, [
+      "enabled",
+      "isEnabled",
+      "is_enabled",
+      "loyaltyEnabled",
+      "loyalty_enabled",
+    ]),
+    margin: getNumber(body, ["margin", "loyaltyMargin", "loyalty_margin"], 0),
+    percentage: getNumber(body, ["percentage", "loyaltyPercentage", "loyalty_percentage"], 0),
+    updatedAt: getString(body, ["updatedAt", "updated_at"]) || null,
+  };
+};
+
+export const getLoyaltySettings = async (accessToken: string): Promise<LoyaltySettings> => {
+  const response = await makeRequest(`${AUTH_API_BASE_URL}/restaurants/me/loyalty-settings`, {
+    method: "GET",
+    headers: getAuthHeaders(accessToken),
+  });
+
+  if (!response.ok) {
+    throw new Error(await parseApiError(response, "Failed to load loyalty settings."));
+  }
+
+  const body = (await response.json()) as unknown;
+  return parseLoyaltySettings(body);
+};
+
+export const updateLoyaltySettings = async (
+  accessToken: string,
+  payload: UpdateLoyaltySettingsPayload
+): Promise<LoyaltySettings> => {
+  const response = await makeRequest(`${AUTH_API_BASE_URL}/restaurants/me/loyalty-settings`, {
+    method: "POST",
+    headers: getAuthHeaders(accessToken),
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    throw new Error(await parseApiError(response, "Failed to update loyalty settings."));
+  }
+
+  const body = (await response.json()) as unknown;
+  return parseLoyaltySettings(body);
 };
 
 /**

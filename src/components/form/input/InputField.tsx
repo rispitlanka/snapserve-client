@@ -5,6 +5,8 @@ interface InputProps {
   id?: string;
   name?: string;
   list?: string;
+  inputMode?: React.HTMLAttributes<HTMLInputElement>["inputMode"];
+  pattern?: string;
   autoComplete?: string;
   placeholder?: string;
   value?: string | number;
@@ -14,6 +16,7 @@ interface InputProps {
   min?: string;
   max?: string;
   step?: number;
+  required?: boolean;
   disabled?: boolean;
   success?: boolean;
   error?: boolean;
@@ -25,6 +28,8 @@ const Input: FC<InputProps> = ({
   id,
   name,
   list,
+  inputMode,
+  pattern,
   autoComplete,
   placeholder,
   value,
@@ -34,6 +39,7 @@ const Input: FC<InputProps> = ({
   min,
   max,
   step,
+  required = false,
   disabled = false,
   success = false,
   error = false,
@@ -60,6 +66,8 @@ const Input: FC<InputProps> = ({
         id={id}
         name={name}
         list={list}
+        inputMode={inputMode}
+        pattern={pattern}
         autoComplete={autoComplete}
         placeholder={placeholder}
         value={value}
@@ -68,6 +76,7 @@ const Input: FC<InputProps> = ({
         min={min}
         max={max}
         step={step}
+        required={required}
         disabled={disabled}
         className={inputClasses}
       />

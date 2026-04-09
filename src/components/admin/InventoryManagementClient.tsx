@@ -9,6 +9,7 @@ import { Modal } from "@/components/ui/modal";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
 import { BrandIcon, FolderIcon, SubcategoryIcon, TableIcon } from "@/icons";
 import { getAuthSession, ROLE_DASHBOARD_ROUTE } from "@/lib/auth";
+import { formatDateTimeForDisplay } from "@/lib/format";
 import type {
   InventoryBrand,
   InventoryCategory,
@@ -28,7 +29,6 @@ import {
   listInventorySubCategories,
   updateInventoryItemCurrentStock,
 } from "@/lib/inventory";
-import { formatDateTimeForDisplay } from "@/lib/format";
 import { useClientPagedSlice } from "@/lib/pagination/clientPaging";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -52,6 +52,7 @@ const sortByCreatedAtDesc = <T extends { createdAt: string }>(a: T, b: T) =>
 
 type NameRecentSort = "name" | "recent";
 type SubCategorySortOption = "category" | "name" | "recent";
+type ItemSortOption = "name" | "category" | "unit" | "stock" | "brand";
 
 const inventorySelectClass =
   "h-11 min-w-[12rem] rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90";
@@ -119,6 +120,7 @@ export default function InventoryManagementClient({
   const [historyPageSize, setHistoryPageSize] = useState(10);
 
   const [itemSearchQuery, setItemSearchQuery] = useState("");
+  const [itemSort, setItemSort] = useState<ItemSortOption>("name");
   const [categorySort, setCategorySort] = useState<NameRecentSort>("name");
   const [brandSort, setBrandSort] = useState<NameRecentSort>("name");
   const [subCategorySort, setSubCategorySort] = useState<SubCategorySortOption>("category");
@@ -300,10 +302,53 @@ export default function InventoryManagementClient({
     });
   }, [items, itemSearchQuery]);
 
+  const sortedFilteredItems = useMemo(() => {
+    const list = [...filteredItems];
+
+    const itemName = (item: InventoryItem) => item.name ?? "";
+    const categoryName = (item: InventoryItem) => item.category?.name ?? item.categoryId ?? "";
+    const unitName = (item: InventoryItem) => item.unit ?? "";
+    const brandName = (item: InventoryItem) => item.brand?.name ?? item.brandId ?? "";
+    const stockValue = (item: InventoryItem) => {
+      const parsed = Number(item.currentStock);
+      return Number.isFinite(parsed) ? parsed : 0;
+    };
+
+    if (itemSort === "name") {
+      list.sort((a, b) => localeSort(itemName(a), itemName(b)));
+    } else if (itemSort === "category") {
+      list.sort((a, b) => {
+        const byCategory = localeSort(categoryName(a), categoryName(b));
+        if (byCategory !== 0) return byCategory;
+        return localeSort(itemName(a), itemName(b));
+      });
+    } else if (itemSort === "unit") {
+      list.sort((a, b) => {
+        const byUnit = localeSort(unitName(a), unitName(b));
+        if (byUnit !== 0) return byUnit;
+        return localeSort(itemName(a), itemName(b));
+      });
+    } else if (itemSort === "stock") {
+      list.sort((a, b) => {
+        const byStock = stockValue(b) - stockValue(a);
+        if (byStock !== 0) return byStock;
+        return localeSort(itemName(a), itemName(b));
+      });
+    } else {
+      list.sort((a, b) => {
+        const byBrand = localeSort(brandName(a), brandName(b));
+        if (byBrand !== 0) return byBrand;
+        return localeSort(itemName(a), itemName(b));
+      });
+    }
+
+    return list;
+  }, [filteredItems, itemSort]);
+
   const categoryPaged = useClientPagedSlice(sortedCategories, categoryPage, categoryPageSize);
   const subCategoryPaged = useClientPagedSlice(sortedSubCategories, subCategoryPage, subCategoryPageSize);
   const brandPaged = useClientPagedSlice(sortedBrands, brandPage, brandPageSize);
-  const itemPaged = useClientPagedSlice(filteredItems, itemPage, itemPageSize);
+  const itemPaged = useClientPagedSlice(sortedFilteredItems, itemPage, itemPageSize);
   const historyPaged = useClientPagedSlice(itemHistory, historyPage, historyPageSize);
 
   useEffect(() => {
@@ -333,6 +378,10 @@ export default function InventoryManagementClient({
   useEffect(() => {
     setItemPage(1);
   }, [itemSearchQuery]);
+
+  useEffect(() => {
+    setItemPage(1);
+  }, [itemSort]);
 
   useEffect(() => {
     setCategoryPage(1);
@@ -640,15 +689,42 @@ export default function InventoryManagementClient({
           ) : null}
 
           {section === "items" && !isLoading && items.length > 0 ? (
-            <div className="flex w-full min-w-40 flex-1 sm:min-w-48 lg:max-w-md">
-              <Input
-                id="inventory-items-search"
-                type="text"
-                value={itemSearchQuery}
-                onChange={(event) => setItemSearchQuery(event.target.value)}
-                placeholder="Search name, category, brand..."
-                className="h-10! py-2"
-              />
+            <div className="flex w-full min-w-0 flex-1 flex-wrap items-center gap-2 lg:justify-end">
+              <div className="min-w-40 flex-1 sm:min-w-48 lg:max-w-md">
+                <Input
+                  id="inventory-items-search"
+                  type="text"
+                  value={itemSearchQuery}
+                  onChange={(event) => setItemSearchQuery(event.target.value)}
+                  placeholder="Search name, category, unit, stock, brand..."
+                  className="h-10! py-2"
+                />
+              </div>
+              <div className="flex min-w-0 items-center gap-2">
+                <span className="shrink-0 text-sm font-medium text-gray-700 dark:text-gray-400">Sort</span>
+                <select
+                  id="inventory-items-sort"
+                  value={itemSort}
+                  onChange={(event) => setItemSort(event.target.value as ItemSortOption)}
+                  className={`${headerSortClass} h-10 min-w-48 py-2`}
+                >
+                  <option value="name">Name (A-Z)</option>
+                  <option value="category">Category (A-Z)</option>
+                  <option value="unit">Unit (A-Z)</option>
+                  <option value="stock">Stock (high to low)</option>
+                  <option value="brand">Brand (A-Z)</option>
+                </select>
+              </div>
+              {itemSearchQuery ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setItemSearchQuery("")}
+                >
+                  Clear
+                </Button>
+              ) : null}
             </div>
           ) : null}
 
@@ -840,7 +916,7 @@ export default function InventoryManagementClient({
               renderEmptyState("Loading inventory items...")
             ) : items.length === 0 ? (
               renderEmptyState("No inventory items found.")
-            ) : filteredItems.length === 0 ? (
+            ) : sortedFilteredItems.length === 0 ? (
               renderEmptyState("No items match your search.")
             ) : (
               <div className="overflow-hidden rounded-xl border border-gray-200 dark:border-gray-800">

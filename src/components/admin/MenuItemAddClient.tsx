@@ -5,6 +5,7 @@ import Label from "@/components/form/Label";
 import Button from "@/components/ui/button/Button";
 import { Modal } from "@/components/ui/modal";
 import { getAuthSession, ROLE_DASHBOARD_ROUTE } from "@/lib/auth";
+import type { CreateMenuItemPayload, MenuType } from "@/lib/menu";
 import {
   createMenuCategory,
   createMenuItem,
@@ -12,7 +13,6 @@ import {
   listMenuCategories,
   listMenuVariants,
 } from "@/lib/menu";
-import type { CreateMenuItemPayload, MenuType } from "@/lib/menu";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import toast from "react-hot-toast";
@@ -22,10 +22,12 @@ type VariantOption = { id: string; name: string; categoryLabel: string };
 type AddonOption = { id: string; name: string };
 
 type VariantRow = { rowKey: string; variantId: string; label: string; price: number };
-type AddonRow = { rowKey: string; addonId: string; price: number };
+type AddonRow = { rowKey: string; addonId: string; label: string; price: number };
 
 const sortSelectClass =
   "h-11 w-full rounded-lg border border-gray-300 bg-transparent px-3 py-2.5 text-sm text-gray-800 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90";
+
+const DECIMAL_INPUT_RE = /^\d*\.?\d{0,2}$/;
 
 const getValue = (record: Record<string, unknown>, keys: string[]) => {
   for (const key of keys) {
@@ -103,9 +105,9 @@ export default function MenuItemAddClient() {
   const [variants, setVariants] = useState<VariantOption[]>([]);
   const [addons, setAddons] = useState<AddonOption[]>([]);
 
+  const [menuId, setMenuId] = useState("");
   const [menuName, setMenuName] = useState("");
   const [categoryId, setCategoryId] = useState("");
-  const [branchMain, setBranchMain] = useState(true);
   const [typeDineIn, setTypeDineIn] = useState(true);
   const [typeTakeaway, setTypeTakeaway] = useState(true);
   const [kotEnabled, setKotEnabled] = useState(false);
@@ -217,6 +219,10 @@ export default function MenuItemAddClient() {
       toast.error("Select a variant.");
       return;
     }
+    if (!variantDraftPrice.trim()) {
+      toast.error("Variant price is required.");
+      return;
+    }
     const price = Number(variantDraftPrice);
     if (!Number.isFinite(price) || price < 0) {
       toast.error("Enter a valid variant price.");
@@ -245,6 +251,10 @@ export default function MenuItemAddClient() {
       toast.error("Select an add-on.");
       return;
     }
+    if (!addonDraftPrice.trim()) {
+      toast.error("Add-on price is required.");
+      return;
+    }
     const price = Number(addonDraftPrice);
     if (!Number.isFinite(price) || price < 0) {
       toast.error("Enter a valid add-on price.");
@@ -254,11 +264,13 @@ export default function MenuItemAddClient() {
       toast.error("That add-on is already added.");
       return;
     }
+    const selectedAddon = addons.find((x) => x.id === addonDraftId);
     setAddonRows((prev) => [
       ...prev,
       {
         rowKey: newRowKey(),
         addonId: addonDraftId,
+        label: selectedAddon?.name ?? addonDraftId,
         price,
       },
     ]);
@@ -295,6 +307,11 @@ export default function MenuItemAddClient() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const normalizedMenuId = menuId.trim();
+    if (!normalizedMenuId) {
+      toast.error("Menu ID is required.");
+      return;
+    }
     const name = menuName.trim();
     if (!name) {
       toast.error("Menu name is required.");
@@ -325,6 +342,7 @@ export default function MenuItemAddClient() {
     }
 
     const payload: CreateMenuItemPayload = {
+      id: normalizedMenuId,
       name,
       categoryId,
       menuType,
@@ -370,11 +388,10 @@ export default function MenuItemAddClient() {
           <form className="mt-6 space-y-5" onSubmit={handleSubmit}>
             <div>
               <Label>Menu ID</Label>
-              <input
-                readOnly
-                value=""
-                placeholder="Assigned when saved"
-                className="h-11 w-full cursor-not-allowed rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-500 dark:border-gray-700 dark:bg-gray-900/50 dark:text-gray-400"
+              <Input
+                value={menuId}
+                onChange={(e) => setMenuId(e.target.value)}
+                placeholder="Enter menu ID"
               />
             </div>
 
@@ -406,24 +423,6 @@ export default function MenuItemAddClient() {
                 <Button type="button" variant="outline" size="sm" onClick={() => setCategoryModalOpen(true)}>
                   Add new category
                 </Button>
-              </div>
-            </div>
-
-            <div>
-              <span className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Assign to Branches
-              </span>
-              <div className="flex items-center justify-between gap-4 rounded-lg border border-gray-200 px-3 py-3 dark:border-gray-700">
-                <span className="text-sm font-medium text-gray-800 dark:text-white/90">MAIN</span>
-                <button
-                  type="button"
-                  role="switch"
-                  aria-checked={branchMain}
-                  onClick={() => setBranchMain((v) => !v)}
-                  className={toggleSwitchClass(branchMain)}
-                >
-                  <span className={toggleKnobClass(branchMain)} />
-                </button>
               </div>
             </div>
 
@@ -548,11 +547,16 @@ export default function MenuItemAddClient() {
                   ))}
                 </select>
                 <Input
-                  type="number"
-                  min="0"
-                  step={0.01}
+                  type="text"
+                  inputMode="decimal"
+                  pattern="^\\d*\\.?\\d{0,2}$"
                   value={variantDraftPrice}
-                  onChange={(e) => setVariantDraftPrice(e.target.value)}
+                  onChange={(e) => {
+                    const next = e.target.value;
+                    if (next === "" || DECIMAL_INPUT_RE.test(next)) {
+                      setVariantDraftPrice(next);
+                    }
+                  }}
                   placeholder="Variant Price"
                   className="sm:max-w-[10rem]"
                 />
@@ -578,11 +582,16 @@ export default function MenuItemAddClient() {
                   ))}
                 </select>
                 <Input
-                  type="number"
-                  min="0"
-                  step={0.01}
+                  type="text"
+                  inputMode="decimal"
+                  pattern="^\\d*\\.?\\d{0,2}$"
                   value={addonDraftPrice}
-                  onChange={(e) => setAddonDraftPrice(e.target.value)}
+                  onChange={(e) => {
+                    const next = e.target.value;
+                    if (next === "" || DECIMAL_INPUT_RE.test(next)) {
+                      setAddonDraftPrice(next);
+                    }
+                  }}
                   placeholder="Addons Price"
                   className="sm:max-w-[10rem]"
                 />
@@ -661,7 +670,7 @@ export default function MenuItemAddClient() {
               <table className="min-w-full text-left text-xs">
                 <thead>
                   <tr className="text-gray-500 dark:text-gray-400">
-                    <th className="pb-2 pr-2 font-medium">Addon ID</th>
+                    <th className="pb-2 pr-2 font-medium">Addon Name</th>
                     <th className="pb-2 pr-2 font-medium">Price</th>
                     <th className="pb-2 font-medium">Action</th>
                   </tr>
@@ -676,8 +685,8 @@ export default function MenuItemAddClient() {
                   ) : (
                     addonRows.map((r) => (
                       <tr key={r.rowKey}>
-                        <td className="max-w-[140px] truncate py-2 pr-2 font-mono text-[11px] text-gray-800 dark:text-gray-200">
-                          {r.addonId}
+                        <td className="py-2 pr-2 text-gray-800 dark:text-gray-200">
+                          {r.label}
                         </td>
                         <td className="py-2 pr-2 text-gray-800 dark:text-gray-200">{r.price.toFixed(2)}</td>
                         <td className="py-2">

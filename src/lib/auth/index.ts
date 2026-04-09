@@ -3,11 +3,7 @@ export {
     createRestaurant,
     createRestaurantAdmin,
     createStaff,
-    createSupplier,
-    deleteStaff,
-    deleteRestaurantAdmin,
-    listRegisters,
-    listRestaurantAdmins,
+    createSupplier, deleteRestaurantAdmin, deleteStaff, getLoyaltySettings, listRegisters, listRestaurantAdmins,
     listRestaurants,
     listStaff,
     listSuppliers,
@@ -15,10 +11,8 @@ export {
     logout,
     parseAuthSession,
     refreshSession,
-    selectRegister,
-    updateRestaurant,
-    updateRestaurantAdmin,
-    updateStaff
+    selectRegister, updateLoyaltySettings, updateRestaurant,
+    updateRestaurantAdmin, updateStaff
 } from "./api";
 export { AUTH_API_BASE_URL, AUTH_STORAGE_KEY, ROLE_DASHBOARD_ROUTE } from "./constants";
 export { clearAuthSession, getAuthSession, saveAuthSession } from "./session";
@@ -33,14 +27,13 @@ export type {
     CreateStaffPayload,
     CreateSupplierPayload,
     DashboardSummary,
+    LoyaltySettings,
     Register,
     RegisterOption,
     Restaurant,
     Staff,
-    Supplier,
-    UpdateRestaurantAdminPayload,
-    UpdateRestaurantPayload,
+    Supplier, UpdateLoyaltySettingsPayload, UpdateRestaurantAdminPayload, UpdateRestaurantPayload,
     UpdateStaffPayload,
-    UserRole,
+    UserRole
 } from "./types";
 
