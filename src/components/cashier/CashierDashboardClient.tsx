@@ -1,8 +1,9 @@
 "use client";
 
-import Button from "@/components/ui/button/Button";
 import Label from "@/components/form/Label";
+import Button from "@/components/ui/button/Button";
 import { Modal } from "@/components/ui/modal";
+import { InfoIcon, ReceiptIcon } from "@/icons";
 import {
   AuthSession,
   clearAuthSession,
@@ -20,6 +21,25 @@ import toast from "react-hot-toast";
 
 const registerSelectClass =
   "h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:focus:border-brand-800";
+
+type CashSummaryCard = {
+  label: string;
+  value: string;
+};
+
+const UNCLOSED_ACCOUNT_STATS: CashSummaryCard[] = [
+  { label: "Total Sales (cash)", value: "0.00" },
+  { label: "Credit Settlement (cash)", value: "0.00" },
+  { label: "Total Purchase (cash)", value: "(0.00)" },
+  { label: "Total Expenses (cash)", value: "(0.00)" },
+  { label: "Total Petty Cash (Reimbursement)", value: "(0.00)" },
+  { label: "Cash Out", value: "(0.00)" },
+];
+
+const UNCLOSED_ACCOUNT_HIGHLIGHT_STATS: CashSummaryCard[] = [
+  { label: "Current Balance", value: "0.00" },
+  { label: "Balance (on hand)", value: "0.00" },
+];
 
 export default function CashierDashboardClient() {
   const router = useRouter();
@@ -128,15 +148,62 @@ export default function CashierDashboardClient() {
 
   return (
     <>
-      <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/3">
-        <h1 className="text-2xl font-semibold text-gray-800 dark:text-white/90">
-          Cashier Dashboard
-        </h1>
-        <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-          {needsRegisterSelection
-            ? "Select a terminal in the dialog to start your session."
-            : `Active register: ${authSession.user.register}`}
-        </p>
+      <div className="space-y-6">
+        <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/3">
+          <h1 className="text-2xl font-semibold text-gray-800 dark:text-white/90">
+            Cashier Dashboard
+          </h1>
+          <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+            {needsRegisterSelection
+              ? "Select a terminal in the dialog to start your session."
+              : `Active register: ${authSession.user.register}`}
+          </p>
+        </div>
+
+        <section className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/3">
+          <div className="flex items-center gap-2">
+            <ReceiptIcon className="text-gray-500" fontSize="small" />
+            <h2 className="text-xl font-semibold text-gray-800 dark:text-white/90">
+              Unclosed Account Details
+            </h2>
+          </div>
+
+          <div className="mt-5 space-y-5">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {UNCLOSED_ACCOUNT_STATS.map((item) => (
+                <article
+                  key={item.label}
+                  className="rounded-xl border border-gray-200 p-4 dark:border-gray-700"
+                >
+                  <p className="text-sm text-gray-600 dark:text-gray-400">{item.label}</p>
+                  <p className="mt-1 text-lg font-semibold text-gray-900 dark:text-white">{item.value}</p>
+                </article>
+              ))}
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              {UNCLOSED_ACCOUNT_HIGHLIGHT_STATS.map((item) => (
+                <article
+                  key={item.label}
+                  className="rounded-xl border border-gray-200 p-4 dark:border-gray-700"
+                >
+                  <p className="text-sm text-gray-600 dark:text-gray-400">{item.label}</p>
+                  <p className="mt-1 text-xl font-semibold text-gray-900 dark:text-white">{item.value}</p>
+                </article>
+              ))}
+            </div>
+
+            <div className="rounded-xl border border-gray-200 p-4 dark:border-gray-700">
+              <p className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-400">
+                <InfoIcon className="mt-0.5 shrink-0" fontSize="small" />
+                <span>
+                  <span className="font-medium">Note:</span> This shows your current unclosed account since the
+                  last closing on Apr 08, 2026 by Geerthana
+                </span>
+              </p>
+            </div>
+          </div>
+        </section>
       </div>
 
       <Modal

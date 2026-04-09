@@ -8,12 +8,12 @@ import { Modal } from "@/components/ui/modal";
 import { getAuthSession, ROLE_DASHBOARD_ROUTE } from "@/lib/auth";
 import { listInventoryItems, type InventoryItem } from "@/lib/inventory";
 import {
-  addAddonPriceToMenuItem,
-  createMenuItemIngredient,
-  listMenuAddons,
-  listMenuCategories,
-  listMenuItems,
-  updateMenuItem,
+    addAddonPriceToMenuItem,
+    createMenuItemIngredient,
+    listMenuAddons,
+    listMenuCategories,
+    listMenuItems,
+    updateMenuItem,
 } from "@/lib/menu";
 import { useClientPagedSlice } from "@/lib/pagination/clientPaging";
 import { useRouter } from "next/navigation";
@@ -35,6 +35,7 @@ type MenuItemRow = {
 type SortOption = "category" | "price" | "status" | "updatedAt";
 
 const normalizeText = (value: string) => value.trim().toLowerCase();
+const DECIMAL_INPUT_RE = /^\d*\.?\d{0,2}$/;
 
 const getValue = (record: Record<string, unknown>, keys: string[]) => {
   for (const key of keys) {
@@ -399,6 +400,10 @@ export default function MenuListClient() {
       toast.error("Select an add-on.");
       return;
     }
+    if (!addonForm.addonsPrice.trim()) {
+      toast.error("Add-on price is required.");
+      return;
+    }
     const price = Number(addonForm.addonsPrice);
     if (!Number.isFinite(price) || price < 0) {
       toast.error("Enter a valid add-on price.");
@@ -715,11 +720,16 @@ export default function MenuListClient() {
             <div>
               <Label>Price</Label>
               <Input
-                type="number"
-                min="0"
-                step={0.01}
+                type="text"
+                inputMode="decimal"
+                pattern="^\\d*\\.?\\d{0,2}$"
                 value={addonForm.addonsPrice}
-                onChange={(ev) => setAddonForm((p) => ({ ...p, addonsPrice: ev.target.value }))}
+                onChange={(ev) => {
+                  const next = ev.target.value;
+                  if (next === "" || DECIMAL_INPUT_RE.test(next)) {
+                    setAddonForm((p) => ({ ...p, addonsPrice: next }));
+                  }
+                }}
                 placeholder="0.00"
               />
             </div>

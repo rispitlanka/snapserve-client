@@ -17,6 +17,7 @@ export type MenuVariantPricePayload = {
 };
 
 export type CreateMenuItemPayload = {
+  id: string;
   name: string;
   categoryId: string;
   menuType: MenuType[];

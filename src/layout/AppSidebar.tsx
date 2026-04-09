@@ -130,6 +130,12 @@ const navItems: NavItem[] = [
     ],
     roles: ["admin"],
   },
+  {
+    icon: <DocsIcon />,
+    name: "Settings",
+    subItems: [{ name: "System Controls", path: "/settings/system-controls" }],
+    roles: ["admin"],
+  },
 
   // Cashier Items
   {

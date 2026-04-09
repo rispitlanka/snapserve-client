@@ -124,3 +124,16 @@ export type UpdateRestaurantAdminPayload = {
   name?: string;
   password?: string;
 };
+
+export type LoyaltySettings = {
+  enabled: boolean;
+  margin: number;
+  percentage: number;
+  updatedAt?: string | null;
+};
+
+export type UpdateLoyaltySettingsPayload = {
+  enabled: boolean;
+  margin: number;
+  percentage: number;
+};
