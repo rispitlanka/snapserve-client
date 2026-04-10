@@ -691,22 +691,9 @@ export default function MenuListClient() {
     <div className="space-y-6 rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/3">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-semibold text-gray-800 dark:text-white/90">Menu List</h1>
-        <Button type="button" size="sm" onClick={() => router.push("/manage-menu/list/add")}>
-          Add menu item
-        </Button>
-      </div>
-
-      <section className="space-y-4 rounded-xl border border-gray-200 p-4 dark:border-gray-800">
-        <div className="flex flex-col gap-3 lg:flex-row lg:flex-wrap lg:items-end">
-          <Input
-            type="text"
-            value={searchQuery}
-            onChange={(ev) => setSearchQuery(ev.target.value)}
-            placeholder="Search by name or category"
-            className="h-10! md:max-w-sm"
-          />
-          <div className="flex flex-col gap-1.5">
-            <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Sort by</span>
+        <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+          <div className="flex items-center gap-2">
+            <span className="shrink-0 text-sm font-medium text-gray-700 dark:text-gray-400">Sort</span>
             <select
               value={sortBy}
               onChange={(ev) => setSortBy(ev.target.value as SortOption)}
@@ -718,6 +705,21 @@ export default function MenuListClient() {
               <option value="updatedAt">Date updated (recent first)</option>
             </select>
           </div>
+          <Button type="button" size="sm" onClick={() => router.push("/manage-menu/list/add")}>
+            Add menu item
+          </Button>
+        </div>
+      </div>
+
+      <section className="space-y-4 rounded-xl border border-gray-200 p-4 dark:border-gray-800">
+        <div className="flex flex-col gap-3 lg:flex-row lg:flex-wrap lg:items-end">
+          <Input
+            type="text"
+            value={searchQuery}
+            onChange={(ev) => setSearchQuery(ev.target.value)}
+            placeholder="Search by name or category"
+            className="h-10! md:max-w-sm"
+          />
         </div>
 
         <div className="overflow-x-auto">

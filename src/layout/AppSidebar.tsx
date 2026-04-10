@@ -1,4 +1,5 @@
 "use client";
+import { navItems, type NavItem } from "@/layout/navigationConfig";
 import type { UserRole } from "@/lib/auth";
 import { getAuthSession } from "@/lib/auth";
 import Image from "next/image";
@@ -14,175 +15,10 @@ import React, {
 } from "react";
 import { useSidebar } from "../context/SidebarContext";
 import {
-    BoxCubeIcon,
-    BoxIcon,
     ChevronDownIcon,
-    DocsIcon,
-    DollarLineIcon,
-    GridIcon,
-    GroupIcon,
-    MenuFoodIcon,
-    PieChartIcon,
     UserIcon,
 } from "../icons/index";
 // import SidebarWidget from "./SidebarWidget";
-
-type NavItem = {
-  name: string;
-  icon: React.ReactNode;
-  path?: string;
-  roles?: UserRole[];
-  subItems?: { name: string; path: string; pro?: boolean; new?: boolean }[];
-};
-
-const navItems: NavItem[] = [
-  // Super Admin Items
-  {
-    icon: <GridIcon />,
-    name: "Dashboard",
-    path: "/superadmin-dashboard",
-    roles: ["superadmin"],
-  },
-  {
-    icon: <BoxCubeIcon />,
-    name: "Restaurants",
-    path: "/manage-restaurent",
-    roles: ["superadmin"],
-  },
-  {
-    icon: <GroupIcon />,
-    name: "Users",
-    path: "/manage-restaurant-admins",
-    roles: ["superadmin"],
-  },
-  {
-    icon: <PieChartIcon />,
-    name: "Reports",
-    path: "/reports",
-    roles: ["superadmin"],
-  },
-  {
-    icon: <DollarLineIcon />,
-    name: "Subscriptions",
-    path: "/subscriptions",
-    roles: ["superadmin"],
-  },
-
-  // Admin Items
-  {
-    icon: <GridIcon />,
-    name: "Dashboard",
-    path: "/admin-dashboard",
-    roles: ["admin"],
-  },
-  {
-    icon: <UserIcon />,
-    name: "Staffs",
-    path: "/manage-staff",
-    roles: ["admin"],
-  },
-  {
-    icon: <GroupIcon />,
-    name: "Suppliers",
-    path: "/manage-suppliers",
-    roles: ["admin"],
-  },
-  {
-    icon: <BoxIcon />,
-    name: "Inventory",
-    subItems: [
-      { name: "Overview", path: "/manage-inventory" },
-      { name: "Items", path: "/manage-inventory/items" },
-      { name: "Brands", path: "/manage-inventory/brands" },
-      { name: "Categories", path: "/manage-inventory/categories" },
-      { name: "Sub-categories", path: "/manage-inventory/sub-categories" },
-    ],
-    roles: ["admin"],
-  },
-  {
-    icon: <DocsIcon />,
-    name: "Purchases",
-    subItems: [
-      { name: "Summary", path: "/manage-purchases/summary" },
-      { name: "Invoice", path: "/manage-purchases/invoice" },
-      { name: "Settlement", path: "/manage-purchases/settlement" },
-    ],
-    roles: ["admin"],
-  },
-  {
-    icon: <MenuFoodIcon />,
-    name: "Menu",
-    subItems: [
-      { name: "Menu List", path: "/manage-menu/list" },
-      { name: "Category", path: "/manage-menu/category" },
-      { name: "Variant", path: "/manage-menu/variant" },
-      { name: "Add On", path: "/manage-menu/add-on" },
-    ],
-    roles: ["admin"],
-  },
-  {
-    icon: <GroupIcon />,
-    name: "Customers",
-    subItems: [
-      { name: "Manage Customers", path: "/manage-customers" },
-      { name: "Credit Settlement", path: "/manage-customers/credit-settlement" },
-      { name: "Cheques", path: "/manage-customers/cheques" },
-    ],
-    roles: ["admin"],
-  },
-  {
-    icon: <DocsIcon />,
-    name: "Settings",
-    subItems: [{ name: "System Controls", path: "/settings/system-controls" }],
-    roles: ["admin"],
-  },
-
-  // Cashier Items
-  {
-    icon: <GridIcon />,
-    name: "Dashboard",
-    path: "/cashier-dashboard",
-    roles: ["cashier"],
-  },
-  {
-    icon: <GroupIcon />,
-    name: "Customers",
-    subItems: [
-      { name: "Manage Customers", path: "/manage-customers" },
-      { name: "Credit Settlement", path: "/manage-customers/credit-settlement" },
-      { name: "Cheques", path: "/manage-customers/cheques" },
-    ],
-    roles: ["cashier"],
-  },
-  // {
-  //   icon: <CalenderIcon />,
-  //   name: "Calendar",
-  //   path: "/calendar",
-  // },
-  // {
-  //   icon: <UserCircleIcon />,
-  //   name: "User Profile",
-  //   path: "/profile",
-  // },
-  // {
-  //   name: "Forms",
-  //   icon: <ListIcon />,
-  //   subItems: [{ name: "Form Elements", path: "/form-elements", pro: false }],
-  // },
-  // {
-  //   name: "Tables",
-  //   icon: <TableIcon />,
-  //   subItems: [{ name: "Basic Tables", path: "/basic-tables", pro: false }],
-  // },
-  // {
-  //   name: "Pages",
-  //   icon: <PageIcon />,
-  //   subItems: [
-  //     { name: "Blank Page", path: "/blank", pro: false },
-  //     { name: "404 Error", path: "/error-404", pro: false },
-  //   ],
-  // },
-];
 
 // const othersItems: NavItem[] = [
 //   {
@@ -288,6 +124,7 @@ const AppSidebar: React.FC = () => {
     return (
     <ul className="flex flex-col gap-4">
       {navItems.map((nav, index) => {
+        const NavIcon = nav.icon;
         const isPrimaryRouteMatch =
           Boolean(nav.path) && firstPathIndex[nav.path as string] === index;
 
@@ -315,7 +152,7 @@ const AppSidebar: React.FC = () => {
                     subMenuActive ? "menu-item-icon-active" : "menu-item-icon-inactive"
                   }
                 >
-                  {nav.icon}
+                  <NavIcon />
                 </span>
               </Link>
             ) : (
@@ -340,7 +177,7 @@ const AppSidebar: React.FC = () => {
                     : "menu-item-icon-inactive"
                 }`}
               >
-                {nav.icon}
+                <NavIcon />
               </span>
               {(isExpanded || isMobileOpen) && (
                 <span className={`menu-item-text`}>{nav.name}</span>
@@ -372,7 +209,7 @@ const AppSidebar: React.FC = () => {
                       : "menu-item-icon-inactive"
                   }`}
                 >
-                  {nav.icon}
+                  <NavIcon />
                 </span>
                 {(isExpanded || isMobileOpen) && (
                   <span className={`menu-item-text`}>{nav.name}</span>

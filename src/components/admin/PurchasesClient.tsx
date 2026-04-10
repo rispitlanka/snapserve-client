@@ -123,6 +123,7 @@ type DraftLine = {
   key: string;
   inventoryItemId: string;
   itemName: string;
+  itemUnit: string;
   quantity: number;
   description: string;
   purchasePrice: number;
@@ -133,11 +134,47 @@ const emptyLine = (): DraftLine => ({
   key: newLineKey(),
   inventoryItemId: "",
   itemName: "",
+  itemUnit: "PCS",
   quantity: 1,
   description: "",
   purchasePrice: 0,
   sellingPrice: 0,
 });
+
+const detectUnitFromName = (name: string): "KG" | "L" | "PCS" => {
+  const value = name.trim().toLowerCase();
+  if (!value) return "PCS";
+
+  const liquidKeywords = ["milk", "oil", "juice", "water", "syrup", "drink", "beverage", "litre", "liter"];
+  const weightKeywords = [
+    "rice",
+    "flour",
+    "sugar",
+    "salt",
+    "meat",
+    "beef",
+    "chicken",
+    "fish",
+    "fruit",
+    "vegetable",
+    "veg",
+    "kg",
+    "kilo",
+    "kilogram",
+  ];
+
+  const tokens = value.split(/[^a-z]+/).filter(Boolean);
+  const matchesKeyword = (keywords: string[]) =>
+    keywords.some(
+      (word) =>
+        value.includes(word) ||
+        tokens.some((token) => word.startsWith(token) || token.startsWith(word))
+    );
+
+  if (matchesKeyword(liquidKeywords)) return "L";
+  if (matchesKeyword(weightKeywords)) return "KG";
+  return "PCS";
+};
 
 type PurchasesClientProps = {
   section: PurchasesSection;
@@ -271,15 +308,17 @@ export default function PurchasesClient({ section }: PurchasesClientProps) {
     [lineTotals]
   );
 
-  const handleInventoryChange = (lineKey: string, itemId: string) => {
-    const item = inventoryItems.find((i) => i.id === itemId);
+  const handleInventoryNameChange = (lineKey: string, itemName: string) => {
+    const normalized = itemName.trim().toLowerCase();
+    const item = inventoryItems.find((i) => i.name.trim().toLowerCase() === normalized);
     setLines((prev) =>
       prev.map((row) =>
         row.key === lineKey
           ? {
               ...row,
-              inventoryItemId: itemId,
-              itemName: item?.name ?? "",
+              inventoryItemId: item?.id ?? "",
+              itemName,
+              itemUnit: item?.unit?.trim() || detectUnitFromName(itemName),
             }
           : row
       )
@@ -302,6 +341,14 @@ export default function PurchasesClient({ section }: PurchasesClientProps) {
 
     if (!supplierId.trim()) {
       toast.error("Select a supplier.");
+      return;
+    }
+
+    const hasUnresolvedItemName = lines.some(
+      (line) => line.itemName.trim() && !line.inventoryItemId.trim()
+    );
+    if (hasUnresolvedItemName) {
+      toast.error("Select a valid inventory item name from suggestions.");
       return;
     }
 
@@ -627,22 +674,31 @@ export default function PurchasesClient({ section }: PurchasesClientProps) {
 
                       <div className={invoiceFieldWrap}>
                         <Label htmlFor={`inv-${line.key}`}>Inventory item</Label>
-                        <select
+                        <Input
                           id={`inv-${line.key}`}
-                          value={line.inventoryItemId}
-                          onChange={(e) => handleInventoryChange(line.key, e.target.value)}
-                          className={invoiceSelectClass}
-                        >
-                          <option value="">Select item</option>
+                          type="text"
+                          list={`inv-options-${line.key}`}
+                          value={line.itemName}
+                          onChange={(e) => handleInventoryNameChange(line.key, e.target.value)}
+                          placeholder="Type inventory name"
+                        />
+                        <datalist id={`inv-options-${line.key}`}>
                           {inventoryItems.map((it) => (
-                            <option key={it.id} value={it.id}>
-                              {it.name}
-                            </option>
+                            <option key={it.id} value={it.name} />
                           ))}
-                        </select>
+                        </datalist>
                       </div>
 
-                      <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:items-end">
+                      <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5 lg:items-end">
+                        <div className={invoiceFieldWrap}>
+                          <Label htmlFor={`type-${line.key}`}>Type (Auto)</Label>
+                          <Input
+                            id={`type-${line.key}`}
+                            type="text"
+                            value={line.itemUnit}
+                            readOnly
+                          />
+                        </div>
                         <div className={invoiceFieldWrap}>
                           <Label htmlFor={`qty-${line.key}`}>Quantity</Label>
                           <Input
