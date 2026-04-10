@@ -3,14 +3,14 @@
 import ClientTablePagination from "@/components/common/ClientTablePagination";
 import type { Staff, Supplier } from "@/lib/auth";
 import {
-  createStaff,
-  createSupplier,
-  deleteStaff,
-  getAuthSession,
-  listStaff,
-  listSuppliers,
-  ROLE_DASHBOARD_ROUTE,
-  updateStaff,
+    createStaff,
+    createSupplier,
+    deleteStaff,
+    getAuthSession,
+    listStaff,
+    listSuppliers,
+    ROLE_DASHBOARD_ROUTE,
+    updateStaff,
 } from "@/lib/auth";
 import { useClientPagedSlice } from "@/lib/pagination/clientPaging";
 import { useRouter } from "next/navigation";
@@ -34,6 +34,7 @@ type SupplierFormState = {
   contactNumber: string;
   description: string;
 };
+type SupplierSortOption = "name" | "recent";
 
 type RestaurantAdminManagementClientProps = {
   defaultActiveTab?: AdminTab;
@@ -53,6 +54,8 @@ const emptySupplierForm: SupplierFormState = {
 };
 
 const normalizeText = (value: string) => value.trim().toLowerCase();
+const sortByCreatedAtDesc = <T extends { createdAt: string }>(a: T, b: T) =>
+  new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
 
 export default function RestaurantAdminManagementClient({
   defaultActiveTab = "staff",
@@ -85,6 +88,7 @@ export default function RestaurantAdminManagementClient({
   const [staffPageSize, setStaffPageSize] = useState(10);
   const [supplierPage, setSupplierPage] = useState(1);
   const [supplierPageSize, setSupplierPageSize] = useState(10);
+  const [supplierSort, setSupplierSort] = useState<SupplierSortOption>("name");
 
   useEffect(() => {
     const initialize = async () => {
@@ -211,8 +215,18 @@ export default function RestaurantAdminManagementClient({
     });
   }, [suppliers, supplierSearch]);
 
+  const supplierSorted = useMemo(() => {
+    const list = [...supplierFiltered];
+    if (supplierSort === "name") {
+      list.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }));
+    } else {
+      list.sort(sortByCreatedAtDesc);
+    }
+    return list;
+  }, [supplierFiltered, supplierSort]);
+
   const staffPaged = useClientPagedSlice(staffFiltered, staffPage, staffPageSize);
-  const supplierPaged = useClientPagedSlice(supplierFiltered, supplierPage, supplierPageSize);
+  const supplierPaged = useClientPagedSlice(supplierSorted, supplierPage, supplierPageSize);
 
   useEffect(() => {
     setStaffPage(1);
@@ -221,6 +235,10 @@ export default function RestaurantAdminManagementClient({
   useEffect(() => {
     setSupplierPage(1);
   }, [supplierSearch]);
+
+  useEffect(() => {
+    setSupplierPage(1);
+  }, [supplierSort]);
 
   useEffect(() => {
     if (staffPaged.safePage !== staffPage) {
@@ -348,28 +366,38 @@ export default function RestaurantAdminManagementClient({
     const trimmedDescription = supplierForm.description.trim();
 
     if (!trimmedName) {
-      setSupplierError("Supplier name is required.");
+      const message = "Supplier name is required.";
+      setSupplierError(message);
+      toast.error(message);
       return;
     }
 
     if (!trimmedContactNumber) {
-      setSupplierError("Supplier contact number is required.");
+      const message = "Supplier contact number is required.";
+      setSupplierError(message);
+      toast.error(message);
       return;
     }
 
     if (!/^[0-9]{10,15}$/.test(normalizedContactNumber)) {
-      setSupplierError("Contact number must be 10-15 digits (numbers only).");
+      const message = "Contact number must be 10-15 digits (numbers only).";
+      setSupplierError(message);
+      toast.error(message);
       return;
     }
 
     if (!trimmedDescription) {
-      setSupplierError("Supplier description is required.");
+      const message = "Supplier description is required.";
+      setSupplierError(message);
+      toast.error(message);
       return;
     }
 
     const session = getAuthSession();
     if (!session) {
-      setSupplierError("Session not found. Please sign in again.");
+      const message = "Session not found. Please sign in again.";
+      setSupplierError(message);
+      toast.error(message);
       return;
     }
 
@@ -417,6 +445,7 @@ export default function RestaurantAdminManagementClient({
           onClick: openSupplierModal,
         }
     : null;
+  const showSupplierHeaderSort = activeTab === "suppliers" && !isLoadingSuppliers && suppliers.length > 0;
 
   return (
     <div className="space-y-6 rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/3">
@@ -424,15 +453,31 @@ export default function RestaurantAdminManagementClient({
         <h1 className="text-2xl font-semibold text-gray-800 dark:text-white/90">
           {pageHeading}
         </h1>
-        {headerAction ? (
-          <button
-            type="button"
-            onClick={headerAction.onClick}
-            className="inline-flex items-center justify-center rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600"
-          >
-            {headerAction.label}
-          </button>
-        ) : null}
+        <div className="flex min-w-0 flex-wrap items-center gap-2 sm:justify-end">
+          {showSupplierHeaderSort ? (
+            <div className="flex min-w-0 items-center gap-2">
+              <span className="shrink-0 text-sm font-medium text-gray-700 dark:text-gray-400">Sort</span>
+              <select
+                id="supplier-sort"
+                value={supplierSort}
+                onChange={(event) => setSupplierSort(event.target.value as SupplierSortOption)}
+                className="h-10 min-w-44 rounded-lg border border-gray-300 bg-transparent px-3 py-2 text-sm text-gray-800 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+              >
+                <option value="name">Name (A-Z)</option>
+                <option value="recent">Recent (newest first)</option>
+              </select>
+            </div>
+          ) : null}
+          {headerAction ? (
+            <button
+              type="button"
+              onClick={headerAction.onClick}
+              className="inline-flex items-center justify-center rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600"
+            >
+              {headerAction.label}
+            </button>
+          ) : null}
+        </div>
       </div>
 
       {showTabSwitcher ? (

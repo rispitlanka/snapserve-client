@@ -690,16 +690,6 @@ export default function InventoryManagementClient({
 
           {section === "items" && !isLoading && items.length > 0 ? (
             <div className="flex w-full min-w-0 flex-1 flex-wrap items-center gap-2 lg:justify-end">
-              <div className="min-w-40 flex-1 sm:min-w-48 lg:max-w-md">
-                <Input
-                  id="inventory-items-search"
-                  type="text"
-                  value={itemSearchQuery}
-                  onChange={(event) => setItemSearchQuery(event.target.value)}
-                  placeholder="Search name, category, unit, stock, brand..."
-                  className="h-10! py-2"
-                />
-              </div>
               <div className="flex min-w-0 items-center gap-2">
                 <span className="shrink-0 text-sm font-medium text-gray-700 dark:text-gray-400">Sort</span>
                 <select
@@ -920,6 +910,16 @@ export default function InventoryManagementClient({
               renderEmptyState("No items match your search.")
             ) : (
               <div className="overflow-hidden rounded-xl border border-gray-200 dark:border-gray-800">
+                <div className="border-b border-gray-200 p-4 dark:border-gray-800">
+                  <Input
+                    id="inventory-items-search"
+                    type="text"
+                    value={itemSearchQuery}
+                    onChange={(event) => setItemSearchQuery(event.target.value)}
+                    placeholder="Search name, category, unit, stock, brand..."
+                    className="h-10! md:max-w-sm"
+                  />
+                </div>
                 <Table>
                   <TableHeader className="bg-gray-50 dark:bg-gray-900/60">
                     <TableRow className="text-left text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400">

@@ -7,11 +7,11 @@ import { Modal } from "@/components/ui/modal";
 import { getAuthSession, ROLE_DASHBOARD_ROUTE } from "@/lib/auth";
 import type { CreateMenuItemPayload, MenuType } from "@/lib/menu";
 import {
-  createMenuCategory,
-  createMenuItem,
-  listMenuAddons,
-  listMenuCategories,
-  listMenuVariants,
+    createMenuCategory,
+    createMenuItem,
+    listMenuAddons,
+    listMenuCategories,
+    listMenuVariants,
 } from "@/lib/menu";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -430,8 +430,8 @@ export default function MenuItemAddClient() {
               <span className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
                 Menu Type <span className="text-red-500">*</span>
               </span>
-              <div className="flex flex-wrap items-stretch gap-3">
-                <div className="flex min-w-[140px] flex-1 items-center justify-between gap-3 rounded-lg border border-gray-200 px-3 py-3 dark:border-gray-700">
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                <div className="flex items-center justify-between gap-3 rounded-lg border border-gray-200 px-3 py-3 dark:border-gray-700">
                   <span className="text-sm font-medium text-gray-800 dark:text-white/90">Dine-In</span>
                   <button
                     type="button"
@@ -443,7 +443,7 @@ export default function MenuItemAddClient() {
                     <span className={toggleKnobClass(typeDineIn)} />
                   </button>
                 </div>
-                <div className="flex min-w-[140px] flex-1 items-center justify-between gap-3 rounded-lg border border-gray-200 px-3 py-3 dark:border-gray-700">
+                <div className="flex items-center justify-between gap-3 rounded-lg border border-gray-200 px-3 py-3 dark:border-gray-700">
                   <span className="text-sm font-medium text-gray-800 dark:text-white/90">Takeaway</span>
                   <button
                     type="button"
@@ -455,22 +455,21 @@ export default function MenuItemAddClient() {
                     <span className={toggleKnobClass(typeTakeaway)} />
                   </button>
                 </div>
+                <div className="flex items-center justify-between gap-3 rounded-lg border border-gray-200 px-3 py-3 dark:border-gray-700">
+                  <span className="text-sm font-medium text-gray-800 dark:text-white/90">
+                    Is KOT enabled <span className="text-red-500">*</span>
+                  </span>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={kotEnabled}
+                    onClick={() => setKotEnabled((v) => !v)}
+                    className={toggleSwitchClass(kotEnabled)}
+                  >
+                    <span className={toggleKnobClass(kotEnabled)} />
+                  </button>
+                </div>
               </div>
-            </div>
-
-            <div className="flex items-center justify-between gap-4 rounded-lg border border-gray-200 px-3 py-3 dark:border-gray-700">
-              <span className="text-sm font-medium text-gray-800 dark:text-white/90">
-                Is KOT enabled <span className="text-red-500">*</span>
-              </span>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={kotEnabled}
-                onClick={() => setKotEnabled((v) => !v)}
-                className={toggleSwitchClass(kotEnabled)}
-              >
-                <span className={toggleKnobClass(kotEnabled)} />
-              </button>
             </div>
 
             <div>

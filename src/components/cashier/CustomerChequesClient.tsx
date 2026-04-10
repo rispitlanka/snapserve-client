@@ -149,36 +149,30 @@ export default function CustomerChequesClient() {
     <div className="space-y-6 rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/3">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-semibold text-gray-800 dark:text-white/90">Customer Cheques</h1>
-      </div>
-
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <div className="w-full max-w-56">
-          <label htmlFor="cheque-sort" className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-            Sort
-          </label>
+        <div className="flex items-center gap-2 sm:justify-end">
+          <span className="shrink-0 text-sm font-medium text-gray-700 dark:text-gray-400">Sort</span>
           <select
             id="cheque-sort"
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as "recent" | "customer")}
-            className="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+            className="h-11 min-w-44 rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
           >
             <option value="recent">Recent</option>
             <option value="customer">Customer</option>
           </select>
         </div>
+      </div>
 
-        <div className="lg:justify-self-end lg:min-w-[20rem]">
+      <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-800">
+        <div className="border-b border-gray-200 p-4 dark:border-gray-800">
           <Input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search customer, cheque no, invoice..."
-            className="h-11!"
+            className="h-11! md:max-w-sm"
           />
         </div>
-      </div>
-
-      <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-800">
         <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
           <thead>
             <tr className="text-left text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400">

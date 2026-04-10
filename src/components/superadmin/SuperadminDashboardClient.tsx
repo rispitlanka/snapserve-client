@@ -697,9 +697,6 @@ export default function SuperadminDashboardClient({
             <h3 className="text-xl font-semibold text-gray-800 dark:text-white/90">
               Add Restaurant
             </h3>
-            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-              Create a restaurant record for the superadmin panel.
-            </p>
           </div>
 
           <div>
@@ -713,9 +710,6 @@ export default function SuperadminDashboardClient({
               placeholder="e.g. rispit-downtown-01"
               className="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
             />
-            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-              Unique identifier sent to the API as <code className="text-xs">id</code>.
-            </p>
           </div>
 
           <div>
@@ -744,16 +738,30 @@ export default function SuperadminDashboardClient({
             />
           </div>
 
-          <div className="flex items-center gap-3">
-            <input
-              id="isActive"
-              type="checkbox"
-              checked={isActive}
-              onChange={(e) => setIsActive(e.target.checked)}
-              className="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500"
-            />
-            <label htmlFor="isActive" className="text-sm text-gray-700 dark:text-gray-300">
+          <div className="flex items-center justify-between gap-3 rounded-lg border border-gray-200 px-3 py-2 dark:border-gray-800">
+            <label htmlFor="isActive" className="text-sm font-medium text-gray-700 dark:text-gray-300">
               Is Active
+            </label>
+            <label htmlFor="isActive" className="inline-flex cursor-pointer items-center gap-2">
+              <input
+                id="isActive"
+                type="checkbox"
+                className="peer sr-only"
+                checked={isActive}
+                onChange={(e) => setIsActive(e.target.checked)}
+              />
+              <span
+                className={`relative inline-block h-6 w-11 shrink-0 rounded-full transition-colors duration-200 ease-in-out peer-focus-visible:ring-2 peer-focus-visible:ring-brand-500/40 ${
+                  isActive ? "bg-brand-500" : "bg-gray-200 dark:bg-white/15"
+                }`}
+              >
+                <span
+                  className={`pointer-events-none absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition duration-200 ease-in-out ${
+                    isActive ? "translate-x-5" : "translate-x-0"
+                  }`}
+                />
+              </span>
+              <span className="text-xs text-gray-600 dark:text-gray-400">{isActive ? "On" : "Off"}</span>
             </label>
           </div>
 
