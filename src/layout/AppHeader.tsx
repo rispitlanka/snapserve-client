@@ -3,14 +3,108 @@ import { ThemeToggleButton } from "@/components/common/ThemeToggleButton";
 // import NotificationDropdown from "@/components/header/NotificationDropdown";
 import UserDropdown from "@/components/header/UserDropdown";
 import { useSidebar } from "@/context/SidebarContext";
+import { navItems } from "@/layout/navigationConfig";
+import type { UserRole } from "@/lib/auth";
+import { ROLE_DASHBOARD_ROUTE, getAuthSession } from "@/lib/auth";
 import Image from "next/image";
 import Link from "next/link";
-import React, { useEffect, useRef, useState } from "react";
+import { usePathname } from "next/navigation";
+import React, { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+
+const roleLabel: Record<UserRole, string> = {
+  superadmin: "Super Admin",
+  admin: "Admin",
+  cashier: "Cashier",
+};
+
+const toTitle = (value: string) =>
+  value
+    .split(/[-_\s]+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+    .join(" ");
+
+const isPathMatch = (pathname: string, basePath: string) =>
+  pathname === basePath || pathname.startsWith(`${basePath}/`);
+
+const getPathTailLabels = (pathname: string, basePath: string): string[] => {
+  if (!pathname.startsWith(basePath)) return [];
+  const tail = pathname.slice(basePath.length).replace(/^\//, "");
+  if (!tail) return [];
+  return tail.split("/").filter(Boolean).map((segment) => toTitle(decodeURIComponent(segment)));
+};
 
 const AppHeader: React.FC = () => {
   const [isApplicationMenuOpen, setApplicationMenuOpen] = useState(false);
+  const pathname = usePathname();
 
   const { isMobileOpen, toggleSidebar, toggleMobileSidebar } = useSidebar();
+
+  const subscribeToSession = useCallback(() => {
+    return () => {
+      // No-op subscription. We only need a hydration-safe snapshot.
+    };
+  }, []);
+
+  const authUserSnapshot = useSyncExternalStore<string>(
+    subscribeToSession,
+    () => {
+      const user = getAuthSession()?.user;
+      return user ? `${user.role}::${user.name ?? ""}` : "";
+    },
+    () => ""
+  );
+
+  const currentRole = useMemo<UserRole | null>(() => {
+    if (!authUserSnapshot) return null;
+    const [rolePart] = authUserSnapshot.split("::");
+    if (!rolePart) return null;
+    return rolePart as UserRole;
+  }, [authUserSnapshot]);
+
+  const breadcrumbs = useMemo(() => {
+    const first = currentRole ? roleLabel[currentRole] : "User";
+    const dashboardPath = currentRole ? ROLE_DASHBOARD_ROUTE[currentRole] : "";
+    const visibleNavItems = navItems.filter(
+      (item) => !item.roles || (!!currentRole && item.roles.includes(currentRole))
+    );
+
+    const candidates: Array<{ score: number; crumbs: string[]; basePath: string }> = [];
+
+    for (const item of visibleNavItems) {
+      if (item.path && isPathMatch(pathname, item.path)) {
+        const tails = getPathTailLabels(pathname, item.path);
+        candidates.push({
+          score: item.path.length,
+          crumbs: [item.name, ...tails],
+          basePath: item.path,
+        });
+      }
+
+      for (const sub of item.subItems ?? []) {
+        if (!isPathMatch(pathname, sub.path)) continue;
+        const tails = getPathTailLabels(pathname, sub.path);
+        candidates.push({
+          score: sub.path.length,
+          crumbs: [item.name, sub.name, ...tails],
+          basePath: sub.path,
+        });
+      }
+    }
+
+    const best = candidates.sort((a, b) => b.score - a.score)[0];
+
+    if (best) {
+      const isDefaultDashboard = best.crumbs[0] === "Dashboard" && best.basePath === dashboardPath;
+      return isDefaultDashboard ? [first] : [first, ...best.crumbs];
+    }
+
+    const rawSegments = pathname.split("/").filter(Boolean);
+    if (rawSegments.length === 0) return [first];
+
+    const fallback = rawSegments.map((segment) => toTitle(decodeURIComponent(segment)));
+    return [first, ...fallback];
+  }, [currentRole, pathname]);
 
   const handleToggle = () => {
     if (window.innerWidth >= 1024) {
@@ -153,11 +247,27 @@ const AppHeader: React.FC = () => {
             </form>
           </div> */}
 
-          <div className="hidden lg:flex items-center">
-            <span className="rounded-md bg-brand-50 px-3 py-1.5 text-sm font-medium text-brand-700 dark:bg-brand-500/10 dark:text-brand-400">
-              Dashboard
-            </span>
-          </div>
+          <nav className="hidden min-w-0 lg:flex lg:items-center" aria-label="Breadcrumb">
+            <ol className="flex min-w-0 items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+              {breadcrumbs.map((crumb, index) => {
+                const isLast = index === breadcrumbs.length - 1;
+                return (
+                  <li key={`${crumb}-${index}`} className="flex min-w-0 items-center gap-2">
+                    {index > 0 ? <span aria-hidden="true">&gt;</span> : null}
+                    <span
+                      className={`truncate ${
+                        isLast
+                          ? "font-semibold text-gray-800 dark:text-white/90"
+                          : "font-medium text-gray-600 dark:text-gray-300"
+                      }`}
+                    >
+                      {crumb}
+                    </span>
+                  </li>
+                );
+              })}
+            </ol>
+          </nav>
         </div>
         <div
           className={`${

@@ -1,11 +1,11 @@
-import InventoryManagementClient from "@/components/admin/InventoryManagementClient";
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 
 export const metadata: Metadata = {
-  title: "Manage Inventory Overview",
-  description: "Inventory overview cards for categories, sub-categories, brands, and items",
+  title: "Manage Inventory",
+  description: "Inventory management",
 };
 
 export default function ManageInventoryPage() {
-  return <InventoryManagementClient section="overview" />;
+  redirect("/manage-inventory/items");
 }

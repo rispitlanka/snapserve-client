@@ -7,19 +7,19 @@ import { Modal } from "@/components/ui/modal";
 import { CalenderIcon, PlusIcon } from "@/icons";
 import { getAuthSession, ROLE_DASHBOARD_ROUTE } from "@/lib/auth";
 import type {
-  InventoryBrand,
-  InventoryCategory,
-  InventorySubCategory,
+    InventoryBrand,
+    InventoryCategory,
+    InventorySubCategory,
 } from "@/lib/inventory";
 import {
-  createInventoryBrand,
-  createInventoryCategory,
-  createInventoryItem,
-  createInventorySubCategory,
-  listInventoryBrands,
-  listInventoryCategories,
-  listInventoryItems,
-  listInventorySubCategories,
+    createInventoryBrand,
+    createInventoryCategory,
+    createInventoryItem,
+    createInventorySubCategory,
+    listInventoryBrands,
+    listInventoryCategories,
+    listInventoryItems,
+    listInventorySubCategories,
 } from "@/lib/inventory";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -87,6 +87,11 @@ const detectUnitFromName = (name: string): "KG" | "L" | "PCS" => {
   if (matchesKeyword(weightKeywords)) return "KG";
 
   return "PCS";
+};
+
+const normalizeId = (value: unknown): string => {
+  if (typeof value !== "string") return "";
+  return value.trim();
 };
 
 export default function AddInventoryItemClient() {
@@ -316,20 +321,47 @@ export default function AddInventoryItemClient() {
     const trimmedName = itemForm.name.trim();
     const trimmedUnit = itemForm.unit.trim();
     const trimmedExpiryDate = itemForm.expiryDate.trim();
+    const normalizedCategoryId = normalizeId(itemForm.categoryId);
+    const normalizedSubCategoryId = normalizeId(itemForm.subCategoryId);
+    const normalizedBrandId = normalizeId(itemForm.brandId);
 
     if (!trimmedName) {
       toast.error("Item name is required.");
       return;
     }
 
-    if (!itemForm.categoryId) {
-      toast.error("Category is required.");
+    if (normalizedCategoryId.length < 1) {
+      toast.error("Category id must be a non-empty string.");
       return;
     }
 
-    if (!itemForm.brandId) {
-      toast.error("Brand is required.");
+    if (normalizedBrandId.length < 1) {
+      toast.error("Brand id must be a non-empty string.");
       return;
+    }
+
+    const categoryExists = categories.some((category) => category.id === normalizedCategoryId);
+    if (!categoryExists) {
+      toast.error("Selected category is invalid. Please select again.");
+      return;
+    }
+
+    const brandExists = brands.some((brand) => brand.id === normalizedBrandId);
+    if (!brandExists) {
+      toast.error("Selected brand is invalid. Please select again.");
+      return;
+    }
+
+    if (normalizedSubCategoryId) {
+      const subCategoryExists = subCategories.some(
+        (subCategory) =>
+          subCategory.id === normalizedSubCategoryId &&
+          subCategory.categoryId === normalizedCategoryId
+      );
+      if (!subCategoryExists) {
+        toast.error("Selected sub-category is invalid for the chosen category.");
+        return;
+      }
     }
 
     if (!trimmedUnit) {
@@ -347,9 +379,9 @@ export default function AddInventoryItemClient() {
     try {
       await createInventoryItem(session.accessToken, {
         name: trimmedName,
-        categoryId: itemForm.categoryId,
-        ...(itemForm.subCategoryId ? { subCategoryId: itemForm.subCategoryId } : {}),
-        brandId: itemForm.brandId,
+        categoryId: normalizedCategoryId,
+        ...(normalizedSubCategoryId ? { subCategoryId: normalizedSubCategoryId } : {}),
+        brandId: normalizedBrandId,
         unit: trimmedUnit,
         ...(trimmedExpiryDate ? { expiryDate: trimmedExpiryDate } : {}),
       });

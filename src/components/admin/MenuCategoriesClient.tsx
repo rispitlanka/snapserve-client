@@ -262,9 +262,23 @@ export default function MenuCategoriesClient() {
     <div className="space-y-6 rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/3">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-semibold text-gray-800 dark:text-white/90">Menu Category</h1>
-        <Button type="button" size="sm" onClick={openAdd}>
-          Add category
-        </Button>
+        <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+          <div className="flex items-center gap-2">
+            <span className="shrink-0 text-sm font-medium text-gray-700 dark:text-gray-400">Sort</span>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as SortOption)}
+              className={sortSelectClass}
+            >
+              <option value="status">Status (active first)</option>
+              <option value="name">Name (A–Z)</option>
+              <option value="updatedAt">Updated (recent first)</option>
+            </select>
+          </div>
+          <Button type="button" size="sm" onClick={openAdd}>
+            Add category
+          </Button>
+        </div>
       </div>
 
       <section className="space-y-4 rounded-xl border border-gray-200 p-4 dark:border-gray-800">
@@ -276,18 +290,6 @@ export default function MenuCategoriesClient() {
             placeholder="Search by name"
             className="h-10! md:max-w-sm"
           />
-          <div className="flex flex-col gap-1.5">
-            <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Sort by</span>
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as SortOption)}
-              className={sortSelectClass}
-            >
-              <option value="status">Status (active first)</option>
-              <option value="name">Name (A–Z)</option>
-              <option value="updatedAt">Updated (recent first)</option>
-            </select>
-          </div>
         </div>
 
         <div className="overflow-x-auto">
